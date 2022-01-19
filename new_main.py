@@ -1,6 +1,6 @@
 import cv2, os, time as t
 
-class ImgProcessing:
+class Del_FiveLine:
     '''
     대부분의 악보들의 오선 시작 위치는 악보의 너비 약 5% 지점에서 시작
     악보의 수직 히스토그램을 구하면 가장 오선의 y축 대비 위치를 쉽게 찾을 수 있음
@@ -18,17 +18,24 @@ class ImgProcessing:
         self.__h, self.__w = self.__dst.shape
         self.__find_hist()
         self.__findFiveLine()
-
+    
+    # 이미지를 컬러 영상에서 -> 흑백 영상으로 변환
     def __GrayScale(self) -> None:
         self.__dst = cv2.cvtColor(self.__origin_img,cv2.COLOR_BGR2GRAY)
         self.__img = self.__dst.copy()
-
+    
+    #  모든 이미지 보기
     def show(self) -> None:
         if self.__dst != []:
             cv2.imshow('dst',self.__dst)
         if self.__img != []:
             cv2.imshow('img',self.__img)
     
+    # 결과 이미지 보기
+    def show(self, name):
+        if self.__img != []:
+            cv2.imshow(name,self.__img)
+
     # 악보의 수평 히스토그램을 구함
     def __find_hist(self) -> None:
         for i in range(1,self.__h-1):
@@ -66,7 +73,7 @@ class ImgProcessing:
             if self.__img[y-1,i] >= 200:
                 self.__img[y,i] = 255
     
-    #이진화
+    # 이미지 이진화
     def binary(self) -> None:
         # _, img = cv2.threshold(img,127,255,cv2.THRESH_OTSU)
         for i in range(self.__img.shape[0]):
@@ -82,13 +89,13 @@ def main():
     ## 오선 이외의 빔 부분도 오선과 겹칠 경우 가끔 지워짐
     ## 개선 필요
     imgs = os.listdir(r'musicnotes')
-    ips = ImgProcessing(imgs[6])
-    print(f'whpos : {(whpos:=list(zip(ips.wpos,ips.hist)))}')
-    for wh in whpos:
-        ips.delete_line(wh)
+    for img in imgs:
+        DFL = Del_FiveLine(img)
+        whpos = list(zip(DFL.wpos,DFL.hist))
+        for wh in whpos:
+            DFL.delete_line(wh)
 
-    
-    ips.show()
+        DFL.show(img)
 
     cv2.waitKey()
     
