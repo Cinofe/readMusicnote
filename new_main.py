@@ -1,3 +1,4 @@
+from multipledispatch import dispatch
 import cv2, os, time as t
 
 class Del_FiveLine:
@@ -25,16 +26,15 @@ class Del_FiveLine:
         self.__img = self.__dst.copy()
     
     #  모든 이미지 보기
+    @dispatch()
     def show(self) -> None:
-        if self.__dst != []:
-            cv2.imshow('dst',self.__dst)
-        if self.__img != []:
-            cv2.imshow('img',self.__img)
+        cv2.imshow('dst',self.__dst)
+        cv2.imshow('img',self.__img)
     
     # 결과 이미지 보기
+    @dispatch(str)
     def show(self, name):
-        if self.__img != []:
-            cv2.imshow(name,self.__img)
+        cv2.imshow(name,self.__img)
 
     # 악보의 수평 히스토그램을 구함
     def __find_hist(self) -> None:
@@ -67,11 +67,13 @@ class Del_FiveLine:
                 self.wpos.append((s+p)-1)
 
     # 검출된 검정 픽셀 선 삭제 
-    def delete_line(self,wh) -> None:
-        x,y = wh
-        for i in range(x,self.__w):
-            if self.__img[y-1,i] >= 200:
-                self.__img[y,i] = 255
+    def delete_line(self,whpos) -> None:
+        for (x,y) in whpos:
+            for i in range(x,self.__w-2):
+                if self.__img[y,i] == 255:
+                    break
+                if self.__img[y-1,i] >= 180:
+                    self.__img[y,i] = 255
     
     # 이미지 이진화
     def binary(self) -> None:
@@ -89,13 +91,17 @@ def main():
     ## 오선 이외의 빔 부분도 오선과 겹칠 경우 가끔 지워짐
     ## 개선 필요
     imgs = os.listdir(r'musicnotes')
-    for img in imgs:
-        DFL = Del_FiveLine(img)
-        whpos = list(zip(DFL.wpos,DFL.hist))
-        for wh in whpos:
-            DFL.delete_line(wh)
+    # for img in imgs:
+    #     DFL = Del_FiveLine(img)
+    #     whpos = list(zip(DFL.wpos,DFL.hist))
+    #     DFL.delete_line(whpos)
+    #     DFL.show(img)
 
-        DFL.show(img)
+    DFL = Del_FiveLine(imgs[0])
+    whpos = list(zip(DFL.wpos,DFL.hist))
+    DFL.delete_line(whpos)
+    DFL.show()
+
 
     cv2.waitKey()
     
