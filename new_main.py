@@ -1,5 +1,6 @@
+from cgi import test
 from multipledispatch import dispatch
-import cv2, os, time as t
+import cv2, os, time as t, numpy as np
 
 class Del_FiveLine:
     '''
@@ -19,6 +20,9 @@ class Del_FiveLine:
         self.__h, self.__w = self.__dst.shape
         self.__find_hist()
         self.__findFiveLine()
+    
+    def __str__(self) -> str:
+        return f'hist : {self.hist} hist length : {len(self.hist)}\nwpos : {self.wpos} wpos length : {len(self.wpos)}'
     
     # 이미지를 컬러 영상에서 -> 흑백 영상으로 변환
     def __GrayScale(self) -> None:
@@ -70,14 +74,13 @@ class Del_FiveLine:
     def delete_line(self,whpos) -> None:
         for (x,y) in whpos:
             for i in range(x,self.__w-2):
-                if self.__img[y,i] == 255:
-                    break
                 if self.__img[y-1,i] >= 180:
                     self.__img[y,i] = 255
-    
+        self.__Morph()
+
     # 이미지 이진화
     def binary(self) -> None:
-        # _, img = cv2.threshold(img,127,255,cv2.THRESH_OTSU)
+        # _, self_dst = cv2.threshold(self.__dst,127,255,cv2.THRESH_OTSU)
         for i in range(self.__img.shape[0]):
             for j in range(self.__img.shape[1]):
                 if self.__img[i,j] > 130:
@@ -85,10 +88,30 @@ class Del_FiveLine:
                 else:
                     self.__img[i,j] = 0
 
+    # 모폴로지 사용으로 오선 제거중 사라진 부분 복구
+    def __Morph(self):
+        test_img = self.__dst.copy()
+        _, test_img = cv2.threshold(test_img,127,255,cv2.THRESH_OTSU)
+        _, test_img = cv2.threshold(test_img,127,255,cv2.THRESH_BINARY_INV)
+
+        kernal_v = np.ones((3,1), np.uint8)
+
+        img_bin_v = cv2.morphologyEx(test_img,cv2.MORPH_OPEN, kernal_v)
+
+        _, img_bin_v = cv2.threshold(img_bin_v,127,255,cv2.THRESH_BINARY_INV)
+
+        for x in range(self.__w):
+            for y in range(self.__h):
+                if self.__img[y,x] > img_bin_v[y,x]:
+                    self.__img[y,x] = img_bin_v[y,x]
+
 def main():
     ## 2022-01-18
     ## 잡음 제거 및 오선 제거하는 부분 추가적인 조건 필요
     ## 오선 이외의 빔 부분도 오선과 겹칠 경우 가끔 지워짐
+    ## Morphology연산을 이용해서 가로선 찾아서
+    ## img에 서 겹치는 부분을 제거하고 
+    ## 세로선 찾기를 이용해서 가로선 지워진 부분을 보충
     ## 개선 필요
     imgs = os.listdir(r'musicnotes')
     # for img in imgs:
@@ -97,11 +120,10 @@ def main():
     #     DFL.delete_line(whpos)
     #     DFL.show(img)
 
-    DFL = Del_FiveLine(imgs[0])
+    DFL = Del_FiveLine(imgs[4])
     whpos = list(zip(DFL.wpos,DFL.hist))
     DFL.delete_line(whpos)
     DFL.show()
-
 
     cv2.waitKey()
     
