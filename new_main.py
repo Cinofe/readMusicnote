@@ -1,4 +1,3 @@
-from cgi import test
 from multipledispatch import dispatch
 import cv2, os, time as t, numpy as np
 
@@ -54,19 +53,19 @@ class Del_FiveLine:
             if value >= (self.__w/100)*70 :
                 self.hist.append(i)
     
-    # 악보의 수직 히스토그램을 기반으로 오선의 시작 위치 추정    
+    # 악보의 수평 히스토그램을 기반으로 오선의 시작 위치 추정    
     def __findFiveLine(self) -> None:
         s = (self.__w//100)*5
 
         for h in self.hist:
-            if self.__dst[h,s] == 0:
+            if self.__dst[h,s] < 240:
                 p = 0
-                while self.__dst[h,s-p] <= 50:
+                while self.__dst[h,s-p] < 240:
                     p += 1
                 self.wpos.append((s-p)+1)
             else:
                 p = 0
-                while self.__dst[h,(s+p)] >= 200:
+                while self.__dst[h,(s+p)] >= 240:
                     p += 1
                 self.wpos.append((s+p)-1)
 
@@ -87,14 +86,14 @@ class Del_FiveLine:
                     self.__img[i,j] = 255
                 else:
                     self.__img[i,j] = 0
-
+                     
     # 모폴로지 사용으로 오선 제거중 사라진 부분 복구
     def __Morph(self):
         test_img = self.__dst.copy()
         _, test_img = cv2.threshold(test_img,127,255,cv2.THRESH_OTSU)
         _, test_img = cv2.threshold(test_img,127,255,cv2.THRESH_BINARY_INV)
 
-        kernal_v = np.ones((3,1), np.uint8)
+        kernal_v = np.ones((3,3), np.uint8)
 
         img_bin_v = cv2.morphologyEx(test_img,cv2.MORPH_OPEN, kernal_v)
 
@@ -106,24 +105,18 @@ class Del_FiveLine:
                     self.__img[y,x] = img_bin_v[y,x]
 
 def main():
-    ## 2022-01-18
-    ## 잡음 제거 및 오선 제거하는 부분 추가적인 조건 필요
-    ## 오선 이외의 빔 부분도 오선과 겹칠 경우 가끔 지워짐
-    ## Morphology연산을 이용해서 가로선 찾아서
-    ## img에 서 겹치는 부분을 제거하고 
-    ## 세로선 찾기를 이용해서 가로선 지워진 부분을 보충
-    ## 개선 필요
-    imgs = os.listdir(r'musicnotes')
-    # for img in imgs:
-    #     DFL = Del_FiveLine(img)
-    #     whpos = list(zip(DFL.wpos,DFL.hist))
-    #     DFL.delete_line(whpos)
-    #     DFL.show(img)
 
-    DFL = Del_FiveLine(imgs[4])
-    whpos = list(zip(DFL.wpos,DFL.hist))
-    DFL.delete_line(whpos)
-    DFL.show()
+    imgs = os.listdir(r'musicnotes')
+    for img in imgs:
+        DFL = Del_FiveLine(img)
+        whpos = list(zip(DFL.wpos,DFL.hist))
+        DFL.delete_line(whpos)
+        DFL.show(img)
+
+    # DFL = Del_FiveLine(imgs[0])
+    # whpos = list(zip(DFL.wpos,DFL.hist))
+    # DFL.delete_line(whpos)
+    # DFL.show()
 
     cv2.waitKey()
     
