@@ -1,5 +1,5 @@
 from multipledispatch import dispatch
-import cv2, os, time as t, numpy as np
+import cv2, os, time as t, numpy as np, matplotlib.pyplot as plt
 
 class Del_FiveLine:
     '''
@@ -39,7 +39,8 @@ class Del_FiveLine:
     def show(self, name):
         cv2.imshow(name,self.__img)
 
-    # 악보의 수평 히스토그램을 구함
+    # 악보의 수평 히스토그램을 구하고 그 값중 이미지 너비의 70%이상의
+    # 값을 오선으로 판단하고 데이터로 포함
     def __find_hist(self) -> None:
         for i in range(1,self.__h-1):
             value = 0
@@ -52,8 +53,9 @@ class Del_FiveLine:
                     value += weight
             if value >= (self.__w/100)*70 :
                 self.hist.append(i)
+        
     
-    # 악보의 수평 히스토그램을 기반으로 오선의 시작 위치 추정    
+    # 악보의 수평 히스토그램을 기반으로 오선의 시작 위치(x축) 추정    
     def __findFiveLine(self) -> None:
         s = (self.__w//100)*5
 
@@ -72,10 +74,10 @@ class Del_FiveLine:
     # 검출된 검정 픽셀 선 삭제 
     def delete_line(self,whpos) -> None:
         for (x,y) in whpos:
-            for i in range(x,self.__w-2):
+            for i in range(x,self.__w):
                 if self.__img[y-1,i] >= 180:
                     self.__img[y,i] = 255
-        self.__Morph()
+        self.__Morph(whpos)
 
     # 이미지 이진화
     def binary(self) -> None:
@@ -88,7 +90,7 @@ class Del_FiveLine:
                     self.__img[i,j] = 0
                      
     # 모폴로지 사용으로 오선 제거중 사라진 부분 복구
-    def __Morph(self):
+    def __Morph(self, whpos) -> None:
         test_img = self.__dst.copy()
         _, test_img = cv2.threshold(test_img,127,255,cv2.THRESH_OTSU)
         _, test_img = cv2.threshold(test_img,127,255,cv2.THRESH_BINARY_INV)
@@ -99,24 +101,24 @@ class Del_FiveLine:
 
         _, img_bin_v = cv2.threshold(img_bin_v,127,255,cv2.THRESH_BINARY_INV)
 
-        for x in range(self.__w):
-            for y in range(self.__h):
-                if self.__img[y,x] > img_bin_v[y,x]:
-                    self.__img[y,x] = img_bin_v[y,x]
+        for (_,y) in whpos:
+            for i in range(self.__w):
+                if self.__img[y,i] > img_bin_v[y,i]:
+                    self.__img[y,i] = img_bin_v[y,i]
 
 def main():
 
     imgs = os.listdir(r'musicnotes')
-    for img in imgs:
-        DFL = Del_FiveLine(img)
-        whpos = list(zip(DFL.wpos,DFL.hist))
-        DFL.delete_line(whpos)
-        DFL.show(img)
+    # for img in imgs:
+    #     DFL = Del_FiveLine(img)
+    #     whpos = list(zip(DFL.wpos,DFL.hist))
+    #     DFL.delete_line(whpos)
+    #     DFL.show(img)
 
-    # DFL = Del_FiveLine(imgs[0])
-    # whpos = list(zip(DFL.wpos,DFL.hist))
-    # DFL.delete_line(whpos)
-    # DFL.show()
+    DFL = Del_FiveLine(imgs[3])
+    whpos = list(zip(DFL.wpos,DFL.hist))
+    DFL.delete_line(whpos)
+    DFL.show()
 
     cv2.waitKey()
     

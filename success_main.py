@@ -41,15 +41,18 @@ def delete_line(img,i):
 def main():
     dirs = os.listdir(r'musicnotes')
     times = []
+    a = []
     for name in dirs:
-        t_start = t.time()
-        fiveLine_del(name)
-        t_end = t.time()
-        times.append((name,t_end-t_start))
-    print(sum([time[1] for time in times])/8)
+        # t_start = t.time()
+        fiveLine_del(name,a)
+        # t_end = t.time()
+    #     times.append((name,t_end-t_start))
+    # print(sum([time[1] for time in times])/8)
+    print(f'avr = {sum(a)/len(a):.3f}%')
+
     cv2.waitKey()
 
-def fiveLine_del(imgname):
+def fiveLine_del(imgname,a):
 
     wpos = None
     origin_img = cv2.imread(r'musicnotes/'+imgname)
@@ -70,10 +73,11 @@ def fiveLine_del(imgname):
         for j in range(100,img.shape[0]):
             if img[j,i] == 0 and i != 0 and j != 0:
                 wpos = i
+                print(f'img : {imgname}, black pixel pos : {wpos}, img_width : {img.shape[1]}, start pos : {(p:=wpos/img.shape[1]*100):.3f}%')
+                a.append(p)
                 break
         if wpos != None:
             break
-    
     # 검출된 검정 픽셀에서 + 5위치 까지 선 삭제 
     for j in range(5):
         for i in range(img.shape[0]):
@@ -81,7 +85,7 @@ def fiveLine_del(imgname):
             if stop == 1:
                 break
     
-    cv2.imshow(imgname,img)
+    # cv2.imshow(imgname,img)
 
 if __name__ == '__main__':
     main()
