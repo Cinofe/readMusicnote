@@ -91,20 +91,16 @@ class Del_FiveLine:
                      
     # 모폴로지 사용으로 오선 제거중 사라진 부분 복구
     def __Morph(self, whpos) -> None:
-        test_img = self.__dst.copy()
-        _, test_img = cv2.threshold(test_img,127,255,cv2.THRESH_OTSU)
-        _, test_img = cv2.threshold(test_img,127,255,cv2.THRESH_BINARY_INV)
-
+        morph_img = self.__dst.copy()
+        _, morph_img = cv2.threshold(morph_img,127,255,cv2.THRESH_OTSU)
         kernal_v = np.ones((3,3), np.uint8)
-
-        img_bin_v = cv2.morphologyEx(test_img,cv2.MORPH_OPEN, kernal_v)
-
-        _, img_bin_v = cv2.threshold(img_bin_v,127,255,cv2.THRESH_BINARY_INV)
+        morph_img = cv2.morphologyEx(morph_img,cv2.MORPH_CLOSE, kernal_v)
+        cv2.imshow('test3',morph_img)
 
         for (_,y) in whpos:
             for i in range(self.__w):
-                if self.__img[y,i] > img_bin_v[y,i]:
-                    self.__img[y,i] = img_bin_v[y,i]
+                if self.__img[y,i] > morph_img[y,i]:
+                    self.__img[y,i] = morph_img[y,i]
 
 def main():
 
@@ -115,7 +111,7 @@ def main():
     #     DFL.delete_line(whpos)
     #     DFL.show(img)
 
-    DFL = Del_FiveLine(imgs[3])
+    DFL = Del_FiveLine(imgs[0])
     whpos = list(zip(DFL.wpos,DFL.hist))
     DFL.delete_line(whpos)
     DFL.show()
