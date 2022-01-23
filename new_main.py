@@ -46,11 +46,12 @@ class Del_FiveLine:
         for i in range(1,self.__h-1):
             value = 0
             for j in range(1,self.__w-1):
-                if self.__dst[i,j] < 245:
+                if self.__dst[i,j] <= 250:
                     value += 1
             if value >= (self.__w/100)*70 :
                 self.hist.append(i)
                 self.__values[i] = value
+        print(len(self.hist))
     
     # 악보의 수평 히스토그램을 기반으로 오선의 시작 위치(x축) 추정    
     def __findFiveLine(self):
@@ -64,7 +65,7 @@ class Del_FiveLine:
                 self.wpos.append(s-p)
             else:
                 p = 0
-                while self.__dst[h,(s+p)] >= 240:
+                while self.__dst[h,(s+p)+100] >= 240:
                     p += 1
                 self.wpos.append(s+p)
 
