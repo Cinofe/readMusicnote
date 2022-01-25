@@ -1,5 +1,3 @@
-from cv2 import imshow
-from matplotlib.cbook import contiguous_regions
 from multipledispatch import dispatch
 import cv2, os, numpy as np
 
@@ -87,14 +85,14 @@ class Del_FiveLine:
         self.__delete_Name()
 
     # 이미지 이진화
-    def binary(self, img):
+    def __binary(self, img):
         _, new_img = cv2.threshold(img,0,255,cv2.THRESH_OTSU)
         return new_img
                      
     # 모폴로지 사용으로 오선 제거중 사라진 부분 복구
     def __Morph(self, whpos):
         morph_img = self.__dst.copy()
-        morph_img = self.binary(morph_img)
+        morph_img = self.__binary(morph_img)
         kernal_v = np.ones((3,3), np.uint8)
         morph_img = cv2.morphologyEx(morph_img,cv2.MORPH_CLOSE, kernal_v)
 
@@ -122,7 +120,7 @@ class Del_FiveLine:
     
     # 음표 및 여러 객체 외각선 탐지
     def find_Contours(self):
-        src = self.binary(self.__img)
+        src = self.__binary(self.__img)
         contours, _ = cv2.findContours(src, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
         i = 1
         for contour in contours:
@@ -134,6 +132,14 @@ class Del_FiveLine:
             i += 1
         
         cv2.imshow('test',src)
+
+    # 오선 사이 사이의 가사 또는 잡음 제거
+    # 어떻게 제거 해 볼까....
+    '''
+    제거 방법 생각 나면 여기 적기
+    '''
+    def delete_noise(self):
+        pass
 
 def main():
 
