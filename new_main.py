@@ -1,3 +1,5 @@
+from cv2 import imshow
+from matplotlib.cbook import contiguous_regions
 from multipledispatch import dispatch
 import cv2, os, numpy as np
 
@@ -51,8 +53,14 @@ class Del_FiveLine:
             if value >= (self.__w/100)*70 :
                 self.hist.append(i)
                 self.__values[i] = value
-        print(len(self.hist))
-    
+
+    # 악보 위나 아래의 필요없는 부분 삭제
+    def __delete_Name(self):
+        miny = min(self.hist)
+        maxy = max(self.hist)
+        avr = (self.__h//100)*5
+        self.__img = self.__img[miny-avr:maxy+avr,0:self.__w].copy()
+
     # 악보의 수평 히스토그램을 기반으로 오선의 시작 위치(x축) 추정    
     def __findFiveLine(self):
         s = (self.__w//100)*5
@@ -76,6 +84,7 @@ class Del_FiveLine:
                 if self.__img[y-1,i] >= 180:
                     self.__img[y,i] = 255
         self.__Morph(whpos)
+        self.__delete_Name()
 
     # 이미지 이진화
     def binary(self, img):
@@ -94,7 +103,6 @@ class Del_FiveLine:
                 if self.__img[y,i] > morph_img[y,i]:
                     self.__img[y,i] = morph_img[y,i]
 
-
     # 제거된 부분 비율 구하는 부분
     def find_degree(self, whs):
         o_img = self.__dst.copy()
@@ -111,28 +119,41 @@ class Del_FiveLine:
             avrs.append(avr)
             print(f'Total Pixel : {total}, Remained Pixel : {value}, Remained Ratio : {avr:.3f}%')
         print(f'Total Average : {sum(avrs)/len(avrs):.3f}%')
-                
-
+    
+    # 음표 및 여러 객체 외각선 탐지
+    def find_Contours(self):
+        src = self.binary(self.__img)
+        contours, _ = cv2.findContours(src, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+        i = 1
+        for contour in contours:
+            x,y,w,h = cv2.boundingRect(contour)
+            if w < 9 or h < 9:
+                continue
+            cv2.rectangle(src,(x,y,w,h),(0,0,0),1)
+            cv2.putText(src,str(i),(x,y),cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,0,0),1)
+            i += 1
         
+        cv2.imshow('test',src)
 
 def main():
 
     imgs = os.listdir(r'musicnotes')
-    for img in imgs:
-        DFL = Del_FiveLine(img)
-        whpos = list(zip(DFL.wpos,DFL.hist))
-        DFL.delete_line(whpos)
-        DFL.show(img)
-        DFL.find_degree(whpos)
-        cv2.waitKey()
+    # for img in imgs:
+    #     DFL = Del_FiveLine(img)
+    #     whpos = list(zip(DFL.wpos,DFL.hist))
+    #     DFL.delete_line(whpos)
+    #     DFL.show(img)
+    #     DFL.find_degree(whpos)
+    #     cv2.waitKey()
 
-    # DFL = Del_FiveLine(imgs[3])
-    # whpos = list(zip(DFL.wpos,DFL.hist))
-    # DFL.delete_line(whpos)
-    # DFL.show()
+    DFL = Del_FiveLine(imgs[6])
+    whpos = list(zip(DFL.wpos,DFL.hist))
+    DFL.delete_line(whpos)
+    DFL.show()
     # DFL.find_degree(whpos)
+    # DFL.find_Contours()
 
-    # cv2.waitKey()
+    cv2.waitKey()
     
 if __name__ == '__main__':
     main()
