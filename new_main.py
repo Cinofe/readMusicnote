@@ -58,6 +58,7 @@ class Del_FiveLine:
         maxy = max(self.hist)
         avr = (self.__h//100)*5
         self.__img = self.__img[miny-avr:maxy+avr,0:self.__w].copy()
+        self.__dst = self.__dst[miny-avr:maxy+avr,0:self.__w].copy()
 
     # 악보의 수평 히스토그램을 기반으로 오선의 시작 위치(x축) 추정    
     def __findFiveLine(self):
@@ -82,7 +83,7 @@ class Del_FiveLine:
                 if self.__img[y-1,i] >= 180:
                     self.__img[y,i] = 255
         self.__Morph(whpos)
-        self.__delete_Name()
+        # self.__delete_Name()
 
     # 이미지 이진화
     def __binary(self, img):
@@ -145,55 +146,56 @@ class Del_FiveLine:
         cv2.imshow('test',src)
 
     # 오선 사이 사이의 가사 또는 잡음 제거
-    # 어떻게 제거 해 볼까....
     '''
-    제거 방법 생각 나면 여기 적기
-    1. 히스토 그램으로 찾은 오선과 오선 사이의 거리를
-    측정해서 그 값이 제일 큰 값을 가사 및 잡음 공간 이라 판다하고
-    측정해서 나온 값의 1/2 지점을 중점으로 위로 1/4, 밑으로 1/4 공간을
-    모폴로지 연산을 통해 나온 이미지와 비교해서 사라진 공간 복구 때와는
-    반대로 I <- M | I < M 식으로 해주면 그 공간이 지워지지 않을까?
-
     2. 오선이 있는 이미지를 이진화 시킨 후 모폴로지 침식으로 어두운 영역을
     한 차례 확장 시킨 후 컨투어로 외관선을 탐지 하면 오선 포함 악보 부분과 
     가사 및 잡음 부분이 분리될꺼같고, 이렇게 분리 되었을 때 히스토그램으로
     찾은 오선의 y축과 겹치지 않는 컨투어는 모두 지우면 그 공간이 지워지지 않을까?
     '''
-
     def delete_noise(self, whs):
         src = self.__binary(self.__dst)
         kernel = np.ones((3,3), np.uint8)
-        src = cv2.erode(src, kernel,anchor=(-1,-1),iterations=2)
-
-        contours, _ = cv2.findContours(src,cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
+        src = cv2.erode(src, kernel,anchor=(-1,-1),iterations=1)
+        locs = []
+        contours, _ = cv2.findContours(src,cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
         _, ys = list(zip(*whs))
         print(ys)
         for contour in contours:
             x,y,w,h = cv2.boundingRect(contour)
-            cv2.rectangle(src,(x,y,w,h),(0,0,0),1)
-        cv2.imshow('test',src)
+            for _y in ys:
+                if _y > y and _y < y+h:
+                    if h < 20 or w < self.__w//2:
+                        continue
+                    locs.append((x,y,w,h))
+                    cv2.rectangle(self.__img,(x,y,w,h),(0,0,0),1)
+        '''
+        오선 부분 사각형만 체크 확인
+        이제 오선부분 사각형 외의 부분 모두 255로 변경 시켜줘야함
+        '''
+        cv2.imshow('test',self.__img)
 
 def main():
 
     imgs = os.listdir(r'musicnotes')
-    # for img in imgs:
-    #     DFL = Del_FiveLine(img)
-    #     whpos = list(zip(DFL.wpos,DFL.hist))
-    #     DFL.delete_line(whpos)
+    for img in imgs:
+        DFL = Del_FiveLine(img)
+        whpos = list(zip(DFL.wpos,DFL.hist))
+        DFL.delete_line(whpos)
     #     DFL.show(img)
     #     DFL.find_degree(whpos)
-    #     cv2.waitKey()
+        DFL.delete_noise(whpos)
+        cv2.waitKey()
 
-    DFL = Del_FiveLine(imgs[6])
-    whpos = list(zip(DFL.wpos,DFL.hist))
-    DFL.delete_line(whpos)
+    # DFL = Del_FiveLine(imgs[4])
+    # whpos = list(zip(DFL.wpos,DFL.hist))
+    # DFL.delete_line(whpos)
     # DFL.show()
     # DFL.find_degree(whpos)
     # DFL.find_Contours()
-    DFL.delete_noise(whpos)
+    # DFL.delete_noise(whpos)
 
-    cv2.waitKey()
+    # cv2.waitKey()
     
 if __name__ == '__main__':
     main()
