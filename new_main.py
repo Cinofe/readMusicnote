@@ -101,7 +101,6 @@ class Del_FiveLine:
                 if self.__img[y,i] > morph_img[y,i]:
                     self.__img[y,i] = morph_img[y,i]
 
-        cv2.imshow('morph',morph_img)
     # 제거된 부분 비율 구하는 부분
     def find_degree(self, whs):
         o_img = self.__dst.copy()
@@ -121,17 +120,28 @@ class Del_FiveLine:
     
     # 음표 및 여러 객체 외각선 탐지
     def find_Contours(self):
-        src = self.__binary(self.__img)
-        contours, _ = cv2.findContours(src, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-        i = 1
-        for contour in contours:
-            x,y,w,h = cv2.boundingRect(contour)
-            if w < 9 or h < 9:
-                continue
-            cv2.rectangle(src,(x,y,w,h),(0,0,0),1)
-            cv2.putText(src,str(i),(x,y),cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,0,0),1)
-            i += 1
+        '''
+        1. 음표 인식 방법 모폴로지 침식, 팽창을 이용해서 음표 또는 빔 부분
+        좌표를 기억해 놨다가, 컨투어 추출 할 때, 해당 좌표를 포함하고 있는
+        부분만 사각형으로 표시 <- 문제점 : 2분 음표 추출 불가
+        '''
+
+        src = self.__binary(self.__dst)
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3))
+    
+        src = cv2.dilate(src, kernel, anchor=(-1,-1),iterations=2)
+        # src = cv2.erode(src, kernel, anchor=(-1,-1),iterations=1)
         
+        # contours, _ = cv2.findContours(src, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+        # i = 1
+        # for contour in contours:
+        #     x,y,w,h = cv2.boundingRect(contour)
+        #     if w < 9 or h < 9:
+        #         continue
+        #     cv2.rectangle(src,(x,y,w,h),(0,0,0),1)
+        #     cv2.putText(src,str(i),(x,y),cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,0,0),1)
+        #     i += 1
+        cv2.imshow('origin',self.__dst)
         cv2.imshow('test',src)
 
     # 오선 사이 사이의 가사 또는 잡음 제거
@@ -150,8 +160,19 @@ class Del_FiveLine:
     찾은 오선의 y축과 겹치지 않는 컨투어는 모두 지우면 그 공간이 지워지지 않을까?
     '''
 
-    def delete_noise(self):
-        pass
+    def delete_noise(self, whs):
+        src = self.__binary(self.__dst)
+        kernel = np.ones((3,3), np.uint8)
+        src = cv2.erode(src, kernel,anchor=(-1,-1),iterations=2)
+
+        contours, _ = cv2.findContours(src,cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
+
+        _, ys = list(zip(*whs))
+        print(ys)
+        for contour in contours:
+            x,y,w,h = cv2.boundingRect(contour)
+            cv2.rectangle(src,(x,y,w,h),(0,0,0),1)
+        cv2.imshow('test',src)
 
 def main():
 
@@ -167,9 +188,10 @@ def main():
     DFL = Del_FiveLine(imgs[6])
     whpos = list(zip(DFL.wpos,DFL.hist))
     DFL.delete_line(whpos)
-    DFL.show()
+    # DFL.show()
     # DFL.find_degree(whpos)
     # DFL.find_Contours()
+    DFL.delete_noise(whpos)
 
     cv2.waitKey()
     
