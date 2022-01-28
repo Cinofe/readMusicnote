@@ -1,5 +1,6 @@
 from multipledispatch import dispatch
-import cv2, os, numpy as np
+import matplotlib.pyplot as plt
+import cv2, os, numpy as np, time as t
 
 class Del_FiveLine:
     '''
@@ -20,6 +21,9 @@ class Del_FiveLine:
         self.__h, self.__w = self.__dst.shape
         self.__find_hist()
         self.__findFiveLine()
+    
+    def get_shape(self):
+        return (self.__w,self.__h)
     
     def __str__(self):
         return f'hist : {self.hist} hist length : {len(self.hist)}\nwpos : {self.wpos} wpos length : {len(self.wpos)}'
@@ -43,6 +47,8 @@ class Del_FiveLine:
     # 악보의 수평 히스토그램을 구하고 그 값중 이미지 너비의 70%이상의
     # 값을 오선으로 판단하고 데이터로 포함
     def __find_hist(self):
+        # hist = []
+        # ys = []
         for i in range(1,self.__h-1):
             value = 0
             for j in range(1,self.__w-1):
@@ -51,6 +57,11 @@ class Del_FiveLine:
             if value >= (self.__w/100)*70 :
                 self.hist.append(i)
                 self.__values[i] = value
+        #     hist.append(value)
+        #     ys.append(i)
+        
+        # plt.barh(ys,hist)
+        # plt.show()
 
     # 악보 위나 아래의 필요없는 부분 삭제
     def __delete_Name(self):
@@ -179,15 +190,18 @@ def main():
 
     imgs = os.listdir(r'musicnotes')
     for img in imgs:
+        t_start = t.time()
         DFL = Del_FiveLine(img)
         whpos = list(zip(DFL.wpos,DFL.hist))
         DFL.delete_line(whpos)
-    #     DFL.show(img)
+        t_end = t.time()
+        print(f"img : {img}, img size(w,h) : {DFL.get_shape()}, process time : {t_end - t_start:.3f}sec")
+        # DFL.show(img)
     #     DFL.find_degree(whpos)
-        DFL.delete_noise(whpos)
-        cv2.waitKey()
+    #     DFL.delete_noise(whpos)
+    #     cv2.waitKey()
 
-    # DFL = Del_FiveLine(imgs[4])
+    # DFL = Del_FiveLine(imgs[3])
     # whpos = list(zip(DFL.wpos,DFL.hist))
     # DFL.delete_line(whpos)
     # DFL.show()
@@ -195,7 +209,7 @@ def main():
     # DFL.find_Contours()
     # DFL.delete_noise(whpos)
 
-    # cv2.waitKey()
+    cv2.waitKey()
     
 if __name__ == '__main__':
     main()
