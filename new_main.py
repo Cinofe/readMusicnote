@@ -116,7 +116,7 @@ class Del_FiveLine:
     # 제거된 부분 비율 구하는 부분
     def find_degree(self, whs):
         o_img = self.__dst.copy()
-        d_img = self.__img.copy()
+        d_img = self.__binary(self.__img.copy())
         avrs = []
         avr = 0
         for (x,y) in whs:
@@ -127,8 +127,7 @@ class Del_FiveLine:
                     value += 1
             avr = value/total*100
             avrs.append(avr)
-            print(f'Total Pixel : {total}, Remained Pixel : {value}, Remained Ratio : {avr:.3f}%')
-        print(f'Total Average : {sum(avrs)/len(avrs):.3f}%')
+        print(f'Total Staff-line Pixel : {total}, Minimum Remained Ratio : {min(avrs):.3f}%')
     
     # 음표 및 여러 객체 외각선 탐지
     def find_Contours(self):
@@ -190,17 +189,17 @@ def main():
 
     imgs = os.listdir(r'musicnotes')
     for img in imgs:
-        t_start = t.time()
+        # t_start = t.time()
         DFL = Del_FiveLine(img)
         whpos = list(zip(DFL.wpos,DFL.hist))
         DFL.delete_line(whpos)
-        t_end = t.time()
-        print(f"img : {img}, img size(w,h) : {DFL.get_shape()}, process time : {t_end - t_start:.3f}sec")
+        # t_end = t.time()
+        # print(f"img : {img}, img size(w,h) : {DFL.get_shape()}, process time : {t_end - t_start:.3f}sec")
         # DFL.show(img)
-    #     DFL.find_degree(whpos)
-    #     DFL.delete_noise(whpos)
-    #     cv2.waitKey()
-
+        DFL.find_degree(whpos)
+        # DFL.delete_noise(whpos)
+        # cv2.waitKey()
+    
     # DFL = Del_FiveLine(imgs[3])
     # whpos = list(zip(DFL.wpos,DFL.hist))
     # DFL.delete_line(whpos)
