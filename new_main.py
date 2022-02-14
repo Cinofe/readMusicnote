@@ -153,7 +153,7 @@ class Del_FiveLine:
         #     cv2.putText(src,str(i),(x,y),cv2.FONT_HERSHEY_COMPLEX, 0.5, (0,0,0),1)
         #     i += 1
         cv2.imshow('origin',self.__dst)
-        cv2.imshow('test',src)
+        cv2.imshow('find contour',src)
 
     # 오선 사이 사이의 가사 또는 잡음 제거
     '''
@@ -165,28 +165,35 @@ class Del_FiveLine:
     def delete_noise(self, whs):
         src = self.__binary(self.__dst)
         kernel = np.ones((3,3), np.uint8)
+        kernel2 = np.ones((1,5), np.uint8)
         src = cv2.erode(src, kernel,anchor=(-1,-1),iterations=1)
+        src = cv2.dilate(src, kernel2, anchor=(-1,-1),iterations=1)
+
         locs = []
         contours, _ = cv2.findContours(src,cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
         _, ys = list(zip(*whs))
-        print(ys)
+        
         for contour in contours:
             x,y,w,h = cv2.boundingRect(contour)
+            if x == 0 and y == 0 and w == self.__w and h == self.__h:
+                continue
             for _y in ys:
                 if _y > y and _y < y+h:
                     if h < 20 or w < self.__w//2:
                         continue
-                    locs.append((x,y,w,h))
+                    if (x,y,w,h) not in locs:
+                        locs.append((x,y,w,h))
                     cv2.rectangle(self.__img,(x,y,w,h),(0,0,0),1)
+        print(locs,len(locs),sep='\n')
         '''
         오선 부분 사각형만 체크 확인
         이제 오선부분 사각형 외의 부분 모두 255로 변경 시켜줘야함
         '''
-        cv2.imshow('test',self.__img)
+        cv2.imshow('delete noise',self.__img)
 
-def main():
 
+def allimg():
     imgs = os.listdir(r'musicnotes')
     for img in imgs:
         # t_start = t.time()
@@ -195,20 +202,30 @@ def main():
         DFL.delete_line(whpos)
         # t_end = t.time()
         # print(f"img : {img}, img size(w,h) : {DFL.get_shape()}, process time : {t_end - t_start:.3f}sec")
-        # DFL.show(img)
-        DFL.find_degree(whpos)
-        # DFL.delete_noise(whpos)
-        # cv2.waitKey()
+        DFL.show(img)
+        # DFL.find_degree(whpos)
+        DFL.delete_noise(whpos)
+        cv2.waitKey()
     
-    # DFL = Del_FiveLine(imgs[3])
-    # whpos = list(zip(DFL.wpos,DFL.hist))
-    # DFL.delete_line(whpos)
-    # DFL.show()
-    # DFL.find_degree(whpos)
+def oneimg():
+    imgs = os.listdir(r'musicnotes')
+    DFL = Del_FiveLine(imgs[0])
+    whpos = list(zip(DFL.wpos,DFL.hist))
+    DFL.delete_line(whpos)
+    DFL.show()
+    DFL.find_degree(whpos)
     # DFL.find_Contours()
-    # DFL.delete_noise(whpos)
+    DFL.delete_noise(whpos)
 
     cv2.waitKey()
+
+
+def main():
+    oneimg()
+    # allimg()
+    
+    
+    
     
 if __name__ == '__main__':
     main()
