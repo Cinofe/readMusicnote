@@ -11,7 +11,7 @@ class Del_FiveLine:
     이미지 좌측에서 가장 위에 있는 검정 픽셀 검출
     '''
     def __init__(self,img):
-        self.__origin_img = cv2.imread(r'musicnotes/'+img)
+        self.__origin_img = cv2.imread(r'SheetMusics/'+img)
         self.__dst = []
         self.__img = []
         self.hist= []
@@ -162,39 +162,56 @@ class Del_FiveLine:
     가사 및 잡음 부분이 분리될꺼같고, 이렇게 분리 되었을 때 히스토그램으로
     찾은 오선의 y축과 겹치지 않는 컨투어는 모두 지우면 그 공간이 지워지지 않을까?
     '''
-    def delete_noise(self, whs):
+    def delete_noise(self):
         src = self.__binary(self.__dst)
         kernel = np.ones((3,3), np.uint8)
-        kernel2 = np.ones((1,5), np.uint8)
+        kernel2 = np.ones((1,4), np.uint8)
         src = cv2.erode(src, kernel,anchor=(-1,-1),iterations=1)
         src = cv2.dilate(src, kernel2, anchor=(-1,-1),iterations=1)
-
+        src2 = np.full((self.__h,self.__w),255,np.uint8)
+        cv2.imshow('src2',src2)
         locs = []
         contours, _ = cv2.findContours(src,cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-
-        _, ys = list(zip(*whs))
         
         for contour in contours:
             x,y,w,h = cv2.boundingRect(contour)
-            if x == 0 and y == 0 and w == self.__w and h == self.__h:
+            # 악절의 조건 이외의 영역 패스
+            if h < 30 or w < self.__w//2 or x == 0:
                 continue
-            for _y in ys:
-                if _y > y and _y < y+h:
-                    if h < 20 or w < self.__w//2:
-                        continue
-                    if (x,y,w,h) not in locs:
-                        locs.append((x,y,w,h))
-                    cv2.rectangle(self.__img,(x,y,w,h),(0,0,0),1)
+            # print(h)
+            # y = y - (h//10)*1
+            # if h <= 45:
+            #     print("----")
+            #     h += (h//10)*4
+            #     print(h)
+            # else :
+            #     print("----")
+            #     h += (h//10)*2
+            #     print(h)
+            # if (x,y,w,h) not in locs:
+            #     locs.append((x,y,w,h))
+            
+            cv2.rectangle(self.__img,(x,y,w,h),(0,0,0),1)
+            cv2.rectangle(src,(x,y,w,h),(0,0,0),1)
         print(locs,len(locs),sep='\n')
+        # for loc in locs:
+        #     src2[y:y+h,x:x+w] = self.__img,
         '''
         오선 부분 사각형만 체크 확인
         이제 오선부분 사각형 외의 부분 모두 255로 변경 시켜줘야함
+        문제 발생 : 오선이 선으로 연결되어 있으면 제대로 제거가 불가능
+        그래서 수직 성분을 제거하자니 오선영역 바깥 음표는 영역 내부에 안들어옴.
+        
+        해결책 : 
+        1. 영역의 y축 길이를 위, 아래로 10%정도 씩 늘려보자.
         '''
         cv2.imshow('delete noise',self.__img)
+        cv2.imshow('src',src)
+
 
 
 def allimg():
-    imgs = os.listdir(r'musicnotes')
+    imgs = os.listdir(r'SheetMusics')
     for img in imgs:
         # t_start = t.time()
         DFL = Del_FiveLine(img)
@@ -204,18 +221,18 @@ def allimg():
         # print(f"img : {img}, img size(w,h) : {DFL.get_shape()}, process time : {t_end - t_start:.3f}sec")
         DFL.show(img)
         # DFL.find_degree(whpos)
-        DFL.delete_noise(whpos)
+        DFL.delete_noise()
         cv2.waitKey()
     
 def oneimg():
-    imgs = os.listdir(r'musicnotes')
-    DFL = Del_FiveLine(imgs[0])
+    imgs = os.listdir(r'SheetMusics')
+    DFL = Del_FiveLine(imgs[1])
     whpos = list(zip(DFL.wpos,DFL.hist))
     DFL.delete_line(whpos)
-    DFL.show()
-    DFL.find_degree(whpos)
+    # DFL.show()
+    # DFL.find_degree(whpos)
     # DFL.find_Contours()
-    DFL.delete_noise(whpos)
+    DFL.delete_noise()
 
     cv2.waitKey()
 
@@ -223,9 +240,6 @@ def oneimg():
 def main():
     oneimg()
     # allimg()
-    
-    
-    
     
 if __name__ == '__main__':
     main()
