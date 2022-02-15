@@ -2,6 +2,8 @@ from multipledispatch import dispatch
 import matplotlib.pyplot as plt
 import cv2, os, numpy as np, time as t
 
+from sympy import symbols
+
 class Del_FiveLine:
     '''
     대부분의 악보들의 오선 시작 위치는 악보의 너비 약 5% 지점에서 시작
@@ -165,37 +167,51 @@ class Del_FiveLine:
     def delete_noise(self):
         src = self.__binary(self.__dst)
         kernel = np.ones((3,3), np.uint8)
-        kernel2 = np.ones((1,4), np.uint8)
+        kernel2 = np.ones((1,5), np.uint8)
         src = cv2.erode(src, kernel,anchor=(-1,-1),iterations=1)
         src = cv2.dilate(src, kernel2, anchor=(-1,-1),iterations=1)
         src2 = np.full((self.__h,self.__w),255,np.uint8)
-        cv2.imshow('src2',src2)
-        locs = []
+        # cv2.imshow('src2',src2)
+        FLlocs = []
+        SymbolLocs = []
         contours, _ = cv2.findContours(src,cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-        
+
         for contour in contours:
-            x,y,w,h = cv2.boundingRect(contour)
-            # 악절의 조건 이외의 영역 패스
-            if h < 30 or w < self.__w//2 or x == 0:
+            sx,sy,sw,sh = cv2.boundingRect(contour)
+            # 악절 영역 찾기
+            if sx == 0 and sy == 0 :
                 continue
-            # print(h)
-            # y = y - (h//10)*1
-            # if h <= 45:
-            #     print("----")
-            #     h += (h//10)*4
-            #     print(h)
-            # else :
-            #     print("----")
-            #     h += (h//10)*2
-            #     print(h)
-            # if (x,y,w,h) not in locs:
-            #     locs.append((x,y,w,h))
-            
-            cv2.rectangle(self.__img,(x,y,w,h),(0,0,0),1)
-            cv2.rectangle(src,(x,y,w,h),(0,0,0),1)
-        print(locs,len(locs),sep='\n')
-        # for loc in locs:
-        #     src2[y:y+h,x:x+w] = self.__img,
+            if sh >= 30 and sw >= self.__w//2:
+                FLlocs.append((sx,sy,sw,sh))
+                cv2.rectangle(src,(sx,sy,sw,sh),(0,0,0),1)
+            elif sh < 15 and sw > 5 and sw < 80:
+                SymbolLocs.append((sx,sy-5,sw,sh+5))
+                cv2.rectangle(src,(sx,sy-5,sw,sh+5),(0,0,0),1)
+        # 오선 확장 조건
+        # 1. y 조건 - 기호 영역의 y축이 오선의 y축보다 작으면서 기호영역의 y+h가 오선 영역의 y보다 크면 오선 영역의 y를 기호 영역의 y까지 확장.
+        # 2. h 조건 - 기호 영역의 y+h가 오선의 y+h보다 크면서 기호 영역의 y가 오선영역의 y+h보다 작으면 오선 영역의 y+h를 기호 영역 y+h까지 확장.
+        for sx,sy,sw,sh in SymbolLocs:
+            for j,floc in enumerate(FLlocs):
+                fx,fy,fw,fh = floc
+
+                if sy <= fy and (sy + sh) >= fy:
+                    fh += fy - sy
+                    fy = sy
+                
+                if (sy + sh) >= (fy + fh) and sy <= (fy + fh):
+                    fh += (sy + sh) - (fy + fh)
+                
+                if floc is (fx,fy,fw,fh):
+                    cv2.putText(src,str(j),(sx,sy+20),0,0.5,(0,0,0),2)
+                else :
+                    FLlocs[j] = (fx, fy, fw, fh)
+
+        for flloc in FLlocs:
+            cv2.rectangle(self.__img,flloc,(0,0,0),1)
+
+        print(len(FLlocs),FLlocs)
+        print(len(SymbolLocs),SymbolLocs)
+
         '''
         오선 부분 사각형만 체크 확인
         이제 오선부분 사각형 외의 부분 모두 255로 변경 시켜줘야함
@@ -204,9 +220,12 @@ class Del_FiveLine:
         
         해결책 : 
         1. 영역의 y축 길이를 위, 아래로 10%정도 씩 늘려보자.
+         -> 악보마다 y축 길이가 달라서 확장성이 없음.
+        2. 악절의 영역을 먼저 구한 뒤 악보 전체의 특정 영역을 구하고,
+        거기서 악절의 영역에 겹치면서 y축 값이 악절의 y축 값보다 크면
+        악절 영역을 확장. -> 성공 -> 다른 악보에서 오류 발견 3, 6, 8 악보
         '''
         cv2.imshow('delete noise',self.__img)
-        cv2.imshow('src',src)
 
 
 
@@ -226,7 +245,7 @@ def allimg():
     
 def oneimg():
     imgs = os.listdir(r'SheetMusics')
-    DFL = Del_FiveLine(imgs[1])
+    DFL = Del_FiveLine(imgs[4])
     whpos = list(zip(DFL.wpos,DFL.hist))
     DFL.delete_line(whpos)
     # DFL.show()
