@@ -184,44 +184,41 @@ class Del_FiveLine:
         '''
     def delete_noise(self):
         src = self.__binary(self.__dst)
-        kernel = np.ones((3,3), np.uint8)
-        kernel2 = np.ones((1,5), np.uint8)
-        src = cv2.erode(src, kernel,anchor=(-1,-1),iterations=1)
-        src = cv2.dilate(src, kernel2, anchor=(-1,-1),iterations=1)
-        src2 = np.full((self.__h,self.__w),255,np.uint8)
+        src2 = self.__binary(self.__img)
+        src3 = np.full((self.__h,self.__w),255,np.uint8)
+        src = cv2.erode(src, np.ones((3,3), np.uint8),anchor=(-1,-1),iterations=1)
+        src = cv2.dilate(src, np.ones((1,5), np.uint8), anchor=(-1,-1),iterations=1)
+        src2 = cv2.erode(src2, np.ones((2,2),np.uint8),anchor=(-1,-1),iterations=1)
 
         FLlocs = []
-        
         SymbolLocs = []
-        src3 = self.__binary(self.__img)
-        src3 = cv2.erode(src3, np.ones((2,2),np.uint8),anchor=(-1,-1),iterations=1)
 
         Fcontours, _ = cv2.findContours(src,cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-        Scontours, _ = cv2.findContours(src3, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+        Scontours, _ = cv2.findContours(src2, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
         
+        # 악절 영역 찾기
         for contour in Fcontours:
             x,y,w,h = cv2.boundingRect(contour)
-            # 악절 영역 찾기
             if x == 0 and y == 0 :
                 continue
             if h >= 30 and w >= self.__w//2:
                 FLlocs.append((x,y,w,h))
-                cv2.rectangle(src,(x,y,w,h),(0,0,0),1)
+                # cv2.rectangle(src,(x,y,w,h),(0,0,0),1)
         
         # 악절 이외의 기호 영역 찾기
         for contour in Scontours:
             x,y,w,h = cv2.boundingRect(contour)
             if x == 0 and y == 0:
                 continue
-            if w < 10 or h < 15 or h > 70:
+            if w < 10 or h < 20 or h > 70 or (w > 30 and h < 30):
                 continue
             SymbolLocs.append((x,y,w,h))
-            cv2.rectangle(src3,(x,y),(x+w,y+h),(0,0,0),1)
+            cv2.rectangle(src2,(x,y),(x+w,y+h),(0,0,0),1)
 
         # 오선 확장 조건
         # 1. y 조건 - 기호 영역의 y축이 오선의 y축보다 작으면서 기호영역의 y+h가 오선 영역의 y보다 크면 오선 영역의 y를 기호 영역의 y까지 확장.
         # 2. h 조건 - 기호 영역의 y+h가 오선의 y+h보다 크면서 기호 영역의 y가 오선영역의 y+h보다 작으면 오선 영역의 y+h를 기호 영역 y+h까지 확장.
-        for sx,sy,_,sh in SymbolLocs:
+        for _,sy,_,sh in SymbolLocs:
             for j,floc in enumerate(FLlocs):
                 fx,fy,fw,fh = floc
 
@@ -232,20 +229,17 @@ class Del_FiveLine:
                 if (sy + sh) >= (fy + fh) and sy <= (fy + fh):
                     fh += (sy + sh) - (fy + fh)
                 
-                if floc is (fx,fy,fw,fh):
-                    cv2.putText(src,str(j),(sx,sy+20),0,0.5,(0,0,0),2)
-                else :
-                    FLlocs[j] = (fx, fy, fw, fh)
+                if not floc is (fx,fy,fw,fh):
+                    FLlocs[j] = (fx, fy, fw, fh)       
 
         for flloc in FLlocs:
-            cv2.rectangle(self.__img,flloc,(0,0,0),1)
-
-        print(len(FLlocs),FLlocs)
-        print(len(SymbolLocs),SymbolLocs)
+            x,y,w,h = flloc
+            src3[y:y+h,x:x+w] = self.__dst[y:y+h,x:x+w].copy()
+            cv2.rectangle(self.__dst,flloc,(0,0,0),1)
 
         
-        cv2.imshow('delete noise',self.__img)
-        # cv2.imshow('src',src3)
+        cv2.imshow('delete noise',self.__dst)
+        cv2.imshow('src',src3)
         
 
 
