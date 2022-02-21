@@ -1,7 +1,5 @@
 from multipledispatch import dispatch
-import matplotlib.pyplot as plt
-import cv2, os, numpy as np, time as t
-import matplotlib.pyplot as plt
+import cv2, os, numpy as np
 
 class Del_FiveLine:
     '''
@@ -236,8 +234,17 @@ class Del_FiveLine:
             x,y,w,h = flloc
             src3[y:y+h,x:x+w] = self.__dst[y:y+h,x:x+w].copy()
             cv2.rectangle(self.__dst,flloc,(0,0,0),1)
+        src4 = src3.copy()
+        src4 = self.__binary(src4)
+        contours, _ = cv2.findContours(src4, cv2.RETR_CCOMP,cv2.CHAIN_APPROX_NONE)
+        for contour in contours:
+            x,y,w,h = cv2.boundingRect(contour)
+            if x == 0 and y == 0:
+                continue
+            if (w < 15 and h < 20) and (w > 10 or h > 10):
+                src3[y:y+h, x:x+w] = np.full((h,w),255,np.uint8)
+                cv2.rectangle(src3, (x,y,w,h),(0,0,0),1)
 
-        
         cv2.imshow('delete noise',self.__dst)
         cv2.imshow('src',src3)
         
@@ -260,7 +267,7 @@ def allimg():
     
 def oneimg():
     imgs = os.listdir(r'SheetMusics')
-    DFL = Del_FiveLine(imgs[1])
+    DFL = Del_FiveLine(imgs[0])
     whpos = list(zip(DFL.wpos,DFL.hist))
     DFL.delete_line(whpos)
     # DFL.show()
@@ -272,8 +279,8 @@ def oneimg():
 
 
 def main():
-    # oneimg()
-    allimg()
+    oneimg()
+    # allimg()
     
 if __name__ == '__main__':
     main()
