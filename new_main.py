@@ -181,16 +181,22 @@ class Del_FiveLine:
         확장) -> 성공 -> 모든 악보에서 악절 영역만 추출 성공.
         '''
     def delete_noise(self):
+        # 기본적인 악절 추적위한 이미지
         src = self.__binary(self.__dst)
+        # 악절의 범위 확장을 위한 음표 추적위한 이미지
         src2 = self.__binary(self.__img)
+        # 측정된 악절만 이력할 이미지
         src3 = np.full((self.__h,self.__w),255,np.uint8)
+        # 악절의 범위를 명확하게 파악하기 위해 형태학(모폴로지)연산 이용
         src = cv2.erode(src, np.ones((3,3), np.uint8),anchor=(-1,-1),iterations=1)
         src = cv2.dilate(src, np.ones((1,5), np.uint8), anchor=(-1,-1),iterations=1)
+        # 명확한 음계를 파악하기 위해 형태학(모폴로지)연산 이용
         src2 = cv2.erode(src2, np.ones((2,2),np.uint8),anchor=(-1,-1),iterations=1)
-
+        # 악절이 표현된 윤곽 사각형의 좌표가 들어갈 리스트
         FLlocs = []
+        # 기호가 표현된 윤곽 사각형의 좌표가 들어갈 리스트
         SymbolLocs = []
-
+        # 영역의 윤곽을 찾는 연산
         Fcontours, _ = cv2.findContours(src,cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
         Scontours, _ = cv2.findContours(src2, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
         
@@ -229,27 +235,36 @@ class Del_FiveLine:
                 
                 if not floc is (fx,fy,fw,fh):
                     FLlocs[j] = (fx, fy, fw, fh)       
-
+        # 확장된 악절 영역을 새로운 이미지에 그려주는 작업
         for flloc in FLlocs:
             x,y,w,h = flloc
             src3[y:y+h,x:x+w] = self.__dst[y:y+h,x:x+w].copy()
             cv2.rectangle(self.__dst,flloc,(0,0,0),1)
+        """
+        제목, 가사들은 제거 완료, 자잘한 노이즈 제거 방법 필요
+        노이즈 제거 할때 오선 내부의 음표도 함꼐 지워지는 부분 수정 필요.
+        1. 오선 제거된 영상에서 윤관석 검출을 통해 제거해보기
+        -> 안됨. 오선과 함께 온음표의 위와 아래가 같이 잘려있어서 노이즈로 처리해버림.
+        """
         src4 = src3.copy()
         src4 = self.__binary(src4)
-        contours, _ = cv2.findContours(src4, cv2.RETR_CCOMP,cv2.CHAIN_APPROX_NONE)
+        # kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (1,1))
+        src4 = cv2.erode(src4, np.ones((1,1),np.uint8), anchor=(-1,-1),iterations=1)
+        # cv2.imshow('test2',src4)
+        contours, _ = cv2.findContours(src4, cv2.RETR_LIST,cv2.CHAIN_APPROX_NONE)
         for contour in contours:
             x,y,w,h = cv2.boundingRect(contour)
             if x == 0 and y == 0:
                 continue
-            if (w < 15 and h < 20) and (w > 10 or h > 10):
+            if (w < 13 and h < 11) and (w > 5 or h > 5):
                 src3[y:y+h, x:x+w] = np.full((h,w),255,np.uint8)
-                cv2.rectangle(src3, (x,y,w,h),(0,0,0),1)
-
-        cv2.imshow('delete noise',self.__dst)
-        cv2.imshow('src',src3)
+                cv2.rectangle(src4, (x,y,w,h),(0,0,0),1)
         
-
-
+        cv2.rectangle(src4,(0,0,13,11),(0,0,0),1)
+        cv2.rectangle(src4,(0,12,5,5),(0,0,0),1)
+        cv2.imshow('delete noise',self.__dst)
+        cv2.imshow('delete five',self.__img)
+        cv2.imshow('src',src3)
 
 def allimg():
     imgs = os.listdir(r'SheetMusics')
@@ -267,7 +282,7 @@ def allimg():
     
 def oneimg():
     imgs = os.listdir(r'SheetMusics')
-    DFL = Del_FiveLine(imgs[0])
+    DFL = Del_FiveLine(imgs[5])
     whpos = list(zip(DFL.wpos,DFL.hist))
     DFL.delete_line(whpos)
     # DFL.show()
