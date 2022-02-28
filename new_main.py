@@ -47,8 +47,6 @@ class Del_FiveLine:
     # 악보의 수평 히스토그램을 구하고 그 값중 이미지 너비의 70%이상의
     # 값을 오선으로 판단하고 데이터로 포함
     def __find_hist(self):
-        # hist = []
-        # ys = []
         for i in range(1,self.__h-1):
             value = 0
             for j in range(1,self.__w-1):
@@ -57,11 +55,6 @@ class Del_FiveLine:
             if value >= (self.__w/100)*70 :
                 self.hist.append(i)
                 self.__values[i] = value
-        #     hist.append(value)
-        #     ys.append(i)
-        
-        # plt.barh(ys,hist)
-        # plt.show()
 
     # 악보 위나 아래의 필요없는 부분 삭제
     def __delete_Name(self):
@@ -90,16 +83,26 @@ class Del_FiveLine:
 
     # 검출된 검정 픽셀 선 삭제 
     def delete_line(self,whpos):
-        for (x,y) in whpos:
-            for i in range(x,self.__w):
-                if self.__dst[y-1,i] >= 180:
-                    self.__dst[y,i] = 255
-        self.__Morph(whpos)
+        # for (x,y) in whpos:
+        #     for i in range(x,self.__w):
+        #         if self.__dst[y-1,i] >= 180:
+        #             self.__dst[y,i] = 255
+        # self.__Morph(whpos)
         # self.__delete_Name()
+
+        ### 테스트 코드 ###
+        for (x,y) in whpos:
+            self.__dst[y,x:self.__w] = np.full((1,self.__w-x),255,np.uint8)
+        
+        cv2.imshow('test',self.__dst)
+        cv2.waitKey()
 
     # 이미지 이진화
     def __binary(self, img):
-        _, new_img = cv2.threshold(img,0,255,cv2.THRESH_OTSU)
+        # _, new_img = cv2.threshold(img,0,255,cv2.THRESH_OTSU)
+        new_img = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_MEAN_C,cv2.THRESH_BINARY,101,20)
+        # cv2.imshow('test',new_img)
+        # cv2.waitKey()
         return new_img
                      
     # 모폴로지 사용으로 오선 제거중 사라진 부분 복구
@@ -218,7 +221,7 @@ class Del_FiveLine:
             x,y,w,h = flloc
             dst3[y:y+h,x:x+w] = self.__src[y:y+h,x:x+w].copy()
             dst4[y:y+h,x:x+w] = self.__dst[y:y+h,x:x+w].copy()
-            cv2.rectangle(self.__src,flloc,(0,0,0),1)
+            # cv2.rectangle(self.__src,flloc,(0,0,0),1)
         
         self.__img = dst3.copy()
         self.__dst = dst4.copy()
@@ -255,27 +258,33 @@ class Del_FiveLine:
 # 음표 및 여러 객체 외각선 탐지
     def find_Contours(self):
         # src = self.__binary(self.__dst)
-        src = cv2.adaptiveThreshold(self.__dst,255,cv2.ADAPTIVE_THRESH_MEAN_C,cv2.THRESH_BINARY,23,2)
+        src = cv2.adaptiveThreshold(self.__dst,255,cv2.ADAPTIVE_THRESH_MEAN_C,cv2.THRESH_BINARY,23,20)
         src2 = self.__img.copy()
 
-        src = cv2.erode(src,np.ones((1,2),np.uint8),anchor=(-1,-1),iterations=1)
+        # src = cv2.erode(src,np.ones((1,2),np.uint8),anchor=(-1,-1),iterations=1)
 
         cv2.imshow('adaptive threshold',src)
         contours, _ = cv2.findContours(src,cv2.RETR_LIST,cv2.CHAIN_APPROX_NONE)
         """
         윤곽선만 잡아서 이미지를 잘라내려고 했는데 언떤결에 세세한 잡음을 어느정도 제거하는데 성공함
-        -> 다른 이미지에서도 되는지 확인 필요 ->
+        -> 다른 이미지에서도 되는지 확인 필요(조금 더 정확하게 잡음 제거 되게끔 해서) ->
         """
+        # 점 음표를 제외한 크기들 점 음표 크기 약 6x6
         for contour in contours:
             x,y,w,h = cv2.boundingRect(contour)
             if x == 0 or y == 0:
                 continue
-            if w > 7 and w < 50 and h < 10:
-                src[y:y+h,x:x+w] = np.full((h,w),255,np.uint8).copy()
-            elif w < 20 and h < 5:
-                src[y:y+h,x:x+w] = np.full((h,w),255,np.uint8).copy()
+            # if (w < 6 and h > 6) or (w > 6 and h < 6) or (w < 6 and h < 6):
+            #     src[y:y+h,x:x+w] = np.full((h,w),255,np.uint8).copy()
+            # elif (w < 12 and w > 6) or (h < 12 and h >6):
+            #     src[y:y+h,x:x+w] = np.full((h,w),255,np.uint8).copy()
+            # else :
+            cv2.rectangle(src,(x,y,w,h),(0,0,0),1)
+            # if w > 7 and w < 50 and h < 10:
+                
+            # elif w < 20 and h < 5:
+            #     src[y:y+h,x:x+w] = np.full((h,w),255,np.uint8).copy()
             # else : 
-            #     cv2.rectangle(src,(x,y,w,h),(0,0,0),1)
 
         cv2.imshow('find contour',src)
         
@@ -300,17 +309,17 @@ def oneimg():
     DFL = Del_FiveLine(imgs[0])
     whpos = list(zip(DFL.wpos,DFL.hist))
     DFL.delete_line(whpos)
-    # DFL.show()
+    DFL.show()
     # DFL.find_degree(whpos)
-    DFL.delete_noise()
-    DFL.find_Contours()
+    # DFL.delete_noise()
+    # DFL.find_Contours()
 
     cv2.waitKey()
 
 
 def main():
-    # oneimg()
-    allimg()
+    oneimg()
+    # allimg()
     
 if __name__ == '__main__':
     main()
