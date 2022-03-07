@@ -93,9 +93,6 @@ class Del_FiveLine:
         ### 테스트 코드 ###
         for (x,y) in whpos:
             self.__dst[y,x:self.__w] = np.full((1,self.__w-x),255,np.uint8)
-        
-        cv2.imshow('test',self.__dst)
-        cv2.waitKey()
 
     # 이미지 이진화
     def __binary(self, img):
