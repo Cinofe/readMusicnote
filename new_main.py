@@ -1,5 +1,6 @@
 from multipledispatch import dispatch
 import cv2, os, numpy as np
+from sympy import Point
 
 class Del_FiveLine:
     '''
@@ -83,21 +84,21 @@ class Del_FiveLine:
 
     # 검출된 검정 픽셀 선 삭제 
     def delete_line(self,whpos):
-        # for (x,y) in whpos:
-        #     for i in range(x,self.__w):
-        #         if self.__dst[y-1,i] >= 180:
-        #             self.__dst[y,i] = 255
-        # self.__Morph(whpos)
+        for (x,y) in whpos:
+            for i in range(x,self.__w):
+                if self.__dst[y-1,i] >= 180:
+                    self.__dst[y,i] = 255
+        self.__Morph(whpos)
         # self.__delete_Name()
 
-        ### 테스트 코드 ###
-        for (x,y) in whpos:
-            self.__dst[y,x:self.__w] = np.full((1,self.__w-x),255,np.uint8)
+        # ### 테스트 코드 ###
+        # for (x,y) in whpos:
+        #     self.__dst[y,x:self.__w] = np.full((1,self.__w-x),255,np.uint8)
 
     # 이미지 이진화
     def __binary(self, img):
-        # _, new_img = cv2.threshold(img,0,255,cv2.THRESH_OTSU)
-        new_img = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_MEAN_C,cv2.THRESH_BINARY,101,20)
+        _, new_img = cv2.threshold(img,0,255,cv2.THRESH_OTSU)
+        # new_img = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_MEAN_C,cv2.THRESH_BINARY,101,20)
         # cv2.imshow('test',new_img)
         # cv2.waitKey()
         return new_img
@@ -184,7 +185,8 @@ class Del_FiveLine:
                 continue
             if h >= 30 and w >= self.__w//2:
                 FLlocs.append((x,y,w,h))
-                # cv2.rectangle(src,(x,y,w,h),(0,0,0),1)
+        #         cv2.rectangle(dst,(x,y,w,h),(0,0,0),1)
+        # cv2.imshow('detect line', dst)
         
         # 악절 이외의 기호 영역 찾기
         for contour in Scontours:
@@ -218,7 +220,8 @@ class Del_FiveLine:
             x,y,w,h = flloc
             dst3[y:y+h,x:x+w] = self.__src[y:y+h,x:x+w].copy()
             dst4[y:y+h,x:x+w] = self.__dst[y:y+h,x:x+w].copy()
-            # cv2.rectangle(self.__src,flloc,(0,0,0),1)
+            cv2.rectangle(self.__src,flloc,(0,0,0),1)
+        # cv2.imshow('src',self.__src)
         
         self.__img = dst3.copy()
         self.__dst = dst4.copy()
@@ -254,36 +257,38 @@ class Del_FiveLine:
 
 # 음표 및 여러 객체 외각선 탐지
     def find_Contours(self):
-        # src = self.__binary(self.__dst)
-        src = cv2.adaptiveThreshold(self.__dst,255,cv2.ADAPTIVE_THRESH_MEAN_C,cv2.THRESH_BINARY,23,20)
+        src = self.__binary(self.__dst)
         src2 = self.__img.copy()
+        dst = self.__binary(self.__dst)
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(3,5))
+        src = cv2.erode(src,kernel,anchor=(-1,-1),iterations=1)
 
-        # src = cv2.erode(src,np.ones((1,2),np.uint8),anchor=(-1,-1),iterations=1)
-
-        cv2.imshow('adaptive threshold',src)
+        # cv2.imshow('binary',src)
         contours, _ = cv2.findContours(src,cv2.RETR_LIST,cv2.CHAIN_APPROX_NONE)
         """
         윤곽선만 잡아서 이미지를 잘라내려고 했는데 언떤결에 세세한 잡음을 어느정도 제거하는데 성공함
         -> 다른 이미지에서도 되는지 확인 필요(조금 더 정확하게 잡음 제거 되게끔 해서) ->
         """
         # 점 음표를 제외한 크기들 점 음표 크기 약 6x6
+        i = 0
+        dir = os.listdir(r'Test_Symbols/')
+        if len(dir) != 0:
+            for d in dir:
+                os.remove(r'Test_Symbols/'+d)
         for contour in contours:
             x,y,w,h = cv2.boundingRect(contour)
             if x == 0 or y == 0:
                 continue
-            # if (w < 6 and h > 6) or (w > 6 and h < 6) or (w < 6 and h < 6):
-            #     src[y:y+h,x:x+w] = np.full((h,w),255,np.uint8).copy()
-            # elif (w < 12 and w > 6) or (h < 12 and h >6):
-            #     src[y:y+h,x:x+w] = np.full((h,w),255,np.uint8).copy()
-            # else :
-            cv2.rectangle(src,(x,y,w,h),(0,0,0),1)
-            # if w > 7 and w < 50 and h < 10:
-                
-            # elif w < 20 and h < 5:
-            #     src[y:y+h,x:x+w] = np.full((h,w),255,np.uint8).copy()
-            # else : 
 
-        cv2.imshow('find contour',src)
+            if w>7 or h>7:
+                # cv2.rectangle(dst,(x,y,w,h),(0,0,0),1)
+                # cv2.putText(dst,str(i),(x+10,y-10),0,0.3,color=(0,0,0),thickness=1)
+                new_img = dst[y:y+h,x:x+w].copy()
+                new_img = cv2.resize(new_img,(w*10,h*10),interpolation=cv2.INTER_LINEAR)
+                cv2.imwrite(r'Test_Symbols/'+str(i)+".jpg",new_img)
+                i += 1
+
+        # cv2.imshow('find contour',dst)
         
 
 def allimg():
@@ -306,10 +311,12 @@ def oneimg():
     DFL = Del_FiveLine(imgs[0])
     whpos = list(zip(DFL.wpos,DFL.hist))
     DFL.delete_line(whpos)
-    DFL.show()
+    
     # DFL.find_degree(whpos)
-    # DFL.delete_noise()
-    # DFL.find_Contours()
+    DFL.delete_noise()
+    DFL.find_Contours()
+
+    # DFL.show()
 
     cv2.waitKey()
 
