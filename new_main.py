@@ -1,5 +1,5 @@
 from multipledispatch import dispatch
-import cv2, os, numpy as np
+import cv2, os, numpy as np, thinning as tf
 from sympy import Point
 
 class Del_FiveLine:
@@ -289,6 +289,13 @@ class Del_FiveLine:
                 i += 1
 
         # cv2.imshow('find contour',dst)
+
+    def thinning_Test(self,num=None):
+        img = cv2.imread(r'Test_Symbols/'+str(num)+'.jpg')
+        img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+        img = self.__binary(img)
+        thin_img = tf.fastThin(img)
+        cv2.imshow('test'+str(num),thin_img)
         
 
 def allimg():
@@ -315,6 +322,9 @@ def oneimg():
     # DFL.find_degree(whpos)
     DFL.delete_noise()
     DFL.find_Contours()
+    DFL.thinning_Test(143)
+    
+
 
     # DFL.show()
 
