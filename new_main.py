@@ -284,7 +284,7 @@ class Del_FiveLine:
                 # cv2.rectangle(dst,(x,y,w,h),(0,0,0),1)
                 # cv2.putText(dst,str(i),(x+10,y-10),0,0.3,color=(0,0,0),thickness=1)
                 new_img = dst[y:y+h,x:x+w].copy()
-                new_img = cv2.resize(new_img,(w*10,h*10),interpolation=cv2.INTER_LINEAR)
+                new_img = cv2.resize(new_img,(w*3,h*3),interpolation=cv2.INTER_LINEAR)
                 cv2.imwrite(r'Test_Symbols/'+str(i)+".jpg",new_img)
                 i += 1
 
