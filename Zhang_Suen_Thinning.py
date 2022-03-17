@@ -126,7 +126,7 @@ class Thinning:
             k += 1
         
         return self.__dst
-
+## 무한 반복 발생.
 if __name__ == '__main__':
     img = cv2.imread(r'Test_Symbols/143.jpg')
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
