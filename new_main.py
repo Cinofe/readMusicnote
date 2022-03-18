@@ -1,6 +1,5 @@
 from multipledispatch import dispatch
 import cv2, os, numpy as np, thinning as tf
-from sympy import Point
 
 class Del_FiveLine:
     '''
@@ -23,12 +22,9 @@ class Del_FiveLine:
         self.__find_hist()
         self.__findFiveLine()
     
-    def get_shape(self):
-        return (self.__w,self.__h)
-    
-    def __str__(self):
-        return f'hist : {self.hist} hist length : {len(self.hist)}\nwpos : {self.wpos} wpos length : {len(self.wpos)}'
-    
+    def GetImg(self):
+        return self.__src,self.__dst
+
     # 이미지를 컬러 영상에서 -> 흑백 영상으로 변환
     def __GrayScale(self):
         self.__src = cv2.cvtColor(self.__origin_img,cv2.COLOR_BGR2GRAY)
@@ -57,15 +53,6 @@ class Del_FiveLine:
                 self.hist.append(i)
                 self.__values[i] = value
 
-    # 악보 위나 아래의 필요없는 부분 삭제
-    def __delete_Name(self):
-        miny = min(self.hist)
-        maxy = max(self.hist)
-        avr = (self.__h//100)*5
-        self.__dst = self.__dst[miny-avr:maxy+avr,0:self.__w].copy()
-        self.__src = self.__src[miny-avr:maxy+avr,0:self.__w].copy()
-        self.__img = self.__img[miny-avr:maxy+avr,0:self.__w].copy()
-
     # 악보의 수평 히스토그램을 기반으로 오선의 시작 위치(x축) 추정    
     def __findFiveLine(self):
         s = (self.__w//100)*5
@@ -89,18 +76,10 @@ class Del_FiveLine:
                 if self.__dst[y-1,i] >= 180:
                     self.__dst[y,i] = 255
         self.__Morph(whpos)
-        # self.__delete_Name()
-
-        # ### 테스트 코드 ###
-        # for (x,y) in whpos:
-        #     self.__dst[y,x:self.__w] = np.full((1,self.__w-x),255,np.uint8)
 
     # 이미지 이진화
     def __binary(self, img):
         _, new_img = cv2.threshold(img,0,255,cv2.THRESH_OTSU)
-        # new_img = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_MEAN_C,cv2.THRESH_BINARY,101,20)
-        # cv2.imshow('test',new_img)
-        # cv2.waitKey()
         return new_img
                      
     # 모폴로지 사용으로 오선 제거중 사라진 부분 복구
@@ -131,6 +110,16 @@ class Del_FiveLine:
             avrs.append(avr)
         print(f'Total Staff-line Pixel : {total}, Minimum Remained Ratio : {min(avrs):.3f}%')
     
+class Del_Noise:
+    def __init__(self, src, dst, hist):
+        self.__src = src
+        self.__dst = dst
+        self.__h, self.__w = self.__src.shape
+        self.__img = []
+        self.hist = hist
+
+    ## 여기 부터는 Delete Five Line Class가 아닌 
+    ## Delete Noise Class 를 만들어서 옮기기
     # 오선 사이 사이의 가사 또는 잡음 제거
     '''
     2. 오선이 있는 이미지를 이진화 시킨 후 모폴로지 침식으로 어두운 영역을
@@ -185,8 +174,6 @@ class Del_FiveLine:
                 continue
             if h >= 30 and w >= self.__w//2:
                 FLlocs.append((x,y,w,h))
-        #         cv2.rectangle(dst,(x,y,w,h),(0,0,0),1)
-        # cv2.imshow('detect line', dst)
         
         # 악절 이외의 기호 영역 찾기
         for contour in Scontours:
@@ -197,7 +184,6 @@ class Del_FiveLine:
                 continue
             SymbolLocs.append((x,y,w,h))
             cv2.rectangle(dst2,(x,y),(x+w,y+h),(0,0,0),1)
-        # cv2.imshow('detect symbol',dst2)
 
         # 오선 확장 조건
         # 1. y 조건 - 기호 영역의 y축이 오선의 y축보다 작으면서 기호영역의 y+h가 오선 영역의 y보다 크면 오선 영역의 y를 기호 영역의 y까지 확장.
@@ -221,7 +207,6 @@ class Del_FiveLine:
             dst3[y:y+h,x:x+w] = self.__src[y:y+h,x:x+w].copy()
             dst4[y:y+h,x:x+w] = self.__dst[y:y+h,x:x+w].copy()
             cv2.rectangle(self.__src,flloc,(0,0,0),1)
-        # cv2.imshow('src',self.__src)
         
         self.__img = dst3.copy()
         self.__dst = dst4.copy()
@@ -235,60 +220,51 @@ class Del_FiveLine:
          - 세세한 잡음은 무시하고 노래 제목, 작사, 작곡, 가사 등의 큰 잡음만 제거 후
            기호를 찾고 잘라서 분류하는것 부터 진행.
         """
-        # src4 = src3.copy()
-        # src4 = self.__binary(src4)
-        # # kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (1,1))
-        # src4 = cv2.erode(src4, np.ones((1,1),np.uint8), anchor=(-1,-1),iterations=1)
-        # # cv2.imshow('test2',src4)
-        # contours, _ = cv2.findContours(src4, cv2.RETR_LIST,cv2.CHAIN_APPROX_NONE)
-        # for contour in contours:
-        #     x,y,w,h = cv2.boundingRect(contour)
-        #     if x == 0 and y == 0:
-        #         continue
-        #     if (w < 13 and h < 11) and (w > 5 or h > 5):
-        #         src3[y:y+h, x:x+w] = np.full((h,w),255,np.uint8)
-        #         cv2.rectangle(src4, (x,y,w,h),(0,0,0),1)
-
         self.__delete_Name()
 
-        # cv2.imshow('detect not noise',self.__src)
-        # cv2.imshow('delete five',self.__dst)
-        # cv2.imshow('delete noise',self.__img)
+    def __binary(self, img):
+        _, new_img = cv2.threshold(img,0,255,cv2.THRESH_OTSU)
+        return new_img
+    
+    # 악보 위나 아래의 필요없는 부분 삭제
+    def __delete_Name(self):
+        miny = min(self.hist)
+        maxy = max(self.hist)
+        avr = (self.__h//100)*5
+        self.__dst = self.__dst[miny-avr:maxy+avr,0:self.__w].copy()
+        self.__src = self.__src[miny-avr:maxy+avr,0:self.__w].copy()
+        self.__img = self.__img[miny-avr:maxy+avr,0:self.__w].copy()
 
-# 음표 및 여러 객체 외각선 탐지
+# 음표 및 여러 객체 찾아서 저장
     def find_Contours(self):
         src = self.__binary(self.__dst)
-        src2 = self.__img.copy()
         dst = self.__binary(self.__dst)
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(3,5))
         src = cv2.erode(src,kernel,anchor=(-1,-1),iterations=1)
 
-        # cv2.imshow('binary',src)
         contours, _ = cv2.findContours(src,cv2.RETR_LIST,cv2.CHAIN_APPROX_NONE)
         """
         윤곽선만 잡아서 이미지를 잘라내려고 했는데 언떤결에 세세한 잡음을 어느정도 제거하는데 성공함
-        -> 다른 이미지에서도 되는지 확인 필요(조금 더 정확하게 잡음 제거 되게끔 해서) ->
+        -> 완전히 제거 하려고 하지 말고, 각 이미지를 잘라 저장하고, 저장한 이미지에서 세선화를 거쳐
+        패턴을 찾고 분류하려는 패턴 이외의 기호들은 잡음으로 처리
         """
-        # 점 음표를 제외한 크기들 점 음표 크기 약 6x6
         i = 0
         dir = os.listdir(r'Test_Symbols/')
+
         if len(dir) != 0:
             for d in dir:
                 os.remove(r'Test_Symbols/'+d)
+
         for contour in contours:
             x,y,w,h = cv2.boundingRect(contour)
             if x == 0 or y == 0:
                 continue
 
             if w>7 or h>7:
-                # cv2.rectangle(dst,(x,y,w,h),(0,0,0),1)
-                # cv2.putText(dst,str(i),(x+10,y-10),0,0.3,color=(0,0,0),thickness=1)
                 new_img = dst[y:y+h,x:x+w].copy()
                 new_img = cv2.resize(new_img,(w*3,h*3),interpolation=cv2.INTER_LINEAR)
                 cv2.imwrite(r'Test_Symbols/'+str(i)+".jpg",new_img)
                 i += 1
-
-        # cv2.imshow('find contour',dst)
 
     def thinning_Test(self,num=None):
         img = cv2.imread(r'Test_Symbols/'+str(num)+'.jpg')
@@ -319,10 +295,11 @@ def oneimg():
     whpos = list(zip(DFL.wpos,DFL.hist))
     DFL.delete_line(whpos)
     
+    DN = Del_Noise(*DFL.GetImg(),DFL.hist)
     # DFL.find_degree(whpos)
-    DFL.delete_noise()
-    DFL.find_Contours()
-    DFL.thinning_Test(143)
+    DN.delete_noise()
+    DN.find_Contours()
+    DN.thinning_Test(143)
     
 
 
