@@ -1,7 +1,17 @@
 from multipledispatch import dispatch
 import cv2, os, numpy as np, thinning as tf
 
-class Del_FiveLine:
+class parent:
+    # 이미지를 컬러 영상에서 -> 흑백 영상으로 변환
+    def __GrayScale(self, img):
+        return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    
+        # 이미지 이진화
+    def __binary(self, img):
+        _, new_img = cv2.threshold(img,0,255,cv2.THRESH_OTSU)
+        return new_img
+
+class Del_FiveLine(parent):
     '''
     대부분의 악보들의 오선 시작 위치는 악보의 너비 약 5% 지점에서 시작
     악보의 수직 히스토그램을 구하면 가장 오선의 y축 대비 위치를 쉽게 찾을 수 있음
@@ -11,24 +21,17 @@ class Del_FiveLine:
     '''
     def __init__(self,img):
         self.__origin_img = cv2.imread(r'SheetMusics/'+img)
-        self.__src = []
-        self.__dst = []
-        self.__img = []
+        self.__src = super().__GrayScale(self.__origin_img)
+        self.__dst = self.__src.copy()
         self.hist= []
         self.wpos = []
         self.__values = {}
-        self.__GrayScale()
         self.__h, self.__w = self.__src.shape
         self.__find_hist()
         self.__findFiveLine()
     
     def GetImg(self):
         return self.__src,self.__dst
-
-    # 이미지를 컬러 영상에서 -> 흑백 영상으로 변환
-    def __GrayScale(self):
-        self.__src = cv2.cvtColor(self.__origin_img,cv2.COLOR_BGR2GRAY)
-        self.__dst = self.__src.copy()
     
     #  모든 이미지 보기
     @dispatch()
@@ -70,26 +73,21 @@ class Del_FiveLine:
                 self.wpos.append(s+p)
 
     # 검출된 검정 픽셀 선 삭제 
-    def delete_line(self,whpos):
-        for (x,y) in whpos:
+    def delete_line(self,whs):
+        for (x,y) in whs:
             for i in range(x,self.__w):
                 if self.__dst[y-1,i] >= 180:
                     self.__dst[y,i] = 255
-        self.__Morph(whpos)
-
-    # 이미지 이진화
-    def __binary(self, img):
-        _, new_img = cv2.threshold(img,0,255,cv2.THRESH_OTSU)
-        return new_img
+        self.__Morph(whs)
                      
     # 모폴로지 사용으로 오선 제거중 사라진 부분 복구
-    def __Morph(self, whpos):
+    def __Morph(self, whs):
         morph_img = self.__src.copy()
-        morph_img = self.__binary(morph_img)
+        morph_img = super().__binary(morph_img)
         kernal_v = np.ones((3,3), np.uint8)
         morph_img = cv2.morphologyEx(morph_img,cv2.MORPH_CLOSE, kernal_v)
 
-        for (_,y) in whpos:
+        for (_,y) in whs:
             for i in range(self.__w):
                 if self.__dst[y,i] > morph_img[y,i]:
                     self.__dst[y,i] = morph_img[y,i]
@@ -97,7 +95,7 @@ class Del_FiveLine:
     # 제거된 부분 비율 구하는 부분
     def find_degree(self, whs):
         o_img = self.__src.copy()
-        d_img = self.__binary(self.__dst.copy())
+        d_img = super().__binary(self.__dst.copy())
         avrs = []
         avr = 0
         for (x,y) in whs:
@@ -110,7 +108,7 @@ class Del_FiveLine:
             avrs.append(avr)
         print(f'Total Staff-line Pixel : {total}, Minimum Remained Ratio : {min(avrs):.3f}%')
     
-class Del_Noise:
+class Del_Noise(parent):
     def __init__(self, src, dst, hist):
         self.__src = src
         self.__dst = dst
@@ -148,9 +146,9 @@ class Del_Noise:
         '''
     def delete_noise(self):
         # 기본적인 악절 추적위한 이미지
-        dst = self.__binary(self.__src)
+        dst = super().__binary(self.__src)
         # 악절의 범위 확장을 위한 음표 추적위한 이미지
-        dst2 = self.__binary(self.__dst)
+        dst2 = super().__binary(self.__dst)
         # 측정된 악절만 이력할 이미지
         dst3 = np.full((self.__h,self.__w),255,np.uint8)
         dst4 = np.full((self.__h,self.__w),255,np.uint8)
@@ -222,10 +220,6 @@ class Del_Noise:
         """
         self.__delete_Name()
 
-    def __binary(self, img):
-        _, new_img = cv2.threshold(img,0,255,cv2.THRESH_OTSU)
-        return new_img
-    
     # 악보 위나 아래의 필요없는 부분 삭제
     def __delete_Name(self):
         miny = min(self.hist)
@@ -237,8 +231,8 @@ class Del_Noise:
 
 # 음표 및 여러 객체 찾아서 저장
     def find_Contours(self):
-        src = self.__binary(self.__dst)
-        dst = self.__binary(self.__dst)
+        src = super().__binary(self.__dst)
+        dst = super().__binary(self.__dst)
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(3,5))
         src = cv2.erode(src,kernel,anchor=(-1,-1),iterations=1)
 
@@ -268,8 +262,8 @@ class Del_Noise:
 
     def thinning_Test(self,num=None):
         img = cv2.imread(r'Test_Symbols/'+str(num)+'.jpg')
-        img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-        img = self.__binary(img)
+        img = super().__GrayScale(img)
+        img = super().__binary(img)
         thin_img = tf.fastThin(img)
         cv2.imshow('test'+str(num),thin_img)
         
