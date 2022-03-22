@@ -1,5 +1,6 @@
 from multipledispatch import dispatch
-import cv2, os, numpy as np, thinning as tf
+import cv2, os, numpy as np
+import Zhang_Suen_Thinning as tn
 
 class parent:
     # 이미지를 컬러 영상에서 -> 흑백 영상으로 변환
@@ -267,6 +268,23 @@ class Del_Noise(parent):
         thin_img = tf.fastThin(img)
         cv2.imshow('test'+str(num),thin_img)
         
+class Thinning(parent):
+    def __init__(self):
+        self.__src = []
+        self.__dst = []
+
+
+    def Thinning(self):
+        Tn = tn.Thinning()
+        imgs = os.listdir(r'Test_Symbols')
+        for img in imgs:
+            self.__src = cv2.imread(r'Test_Symbols/'+img)
+            self.__src = super().GrayScale(self.__src)
+            self.__src = super().binary(self.__src)
+            self.__dst = Tn.Thinning(self.__src)
+            cv2.imwrite(r'thinning_Symbols/'+img, self.__dst)
+
+
 
 def allimg():
     imgs = os.listdir(r'SheetMusics')
@@ -293,8 +311,9 @@ def oneimg():
     # DFL.find_degree(whpos)
     DN.delete_noise()
     DN.find_Contours()
-    DN.thinning_Test(143)
-    
+    # DN.thinning_Test(143)
+    TN = Thinning()
+    TN.Thinning()
 
 
     # DFL.show()

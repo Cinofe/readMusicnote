@@ -119,7 +119,6 @@ class Thinning:
             self.__src = self.__dst.copy()
 
             if self.__counter == 0:
-                print('first iteration 종료')
                 break
 
             self.__counter = 0
@@ -134,7 +133,6 @@ class Thinning:
             self.__src = self.__dst.copy()
 
             if self.__counter == 0:
-                print('seconde iteration종료')
                 break
             
         self.__src = self.__undigitization(self.__src)
