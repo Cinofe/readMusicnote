@@ -1,11 +1,15 @@
-import cv2, time as t
+from ctypes import Array
+from numpy import array, ndarray
+from parent import parent
+from multipledispatch import dispatch
+import cv2, os
 # 0 = WHITE
 # 1 = BLACK
 
 WHITE = 255
 BLACK = 0
 
-class Thinning:
+class Thinning(parent):
     def __init__(self):
         self.__src = None
         self.__dst = None
@@ -102,7 +106,7 @@ class Thinning:
         
         return img
            
-    def Thinning(self,img):
+    def __Thinning_Algorithm(self,img):
         self.__src = img
         self.__h, self.__w = self.__src.shape
         self.__src = self.__digitization(self.__src)
@@ -137,6 +141,32 @@ class Thinning:
             
         self.__src = self.__undigitization(self.__src)
         return self.__src
+    @dispatch()
+    def Thinning(self):
+
+        imgs = os.listdir(r'thinning_Symbols')
+        if len(imgs) != 0:
+            for img in imgs:
+                os.remove(r'thinning_Symbols/'+img)
+        else :
+            print('no img')
+
+        imgs = os.listdir(r'Find_Symbols')
+        for img in imgs:
+            self.__src = cv2.imread(r'Find_Symbols/'+img)
+            self.__src = super().GrayScale(self.__src)
+            self.__src = super().binary(self.__src)
+            self.__dst = self.__Thinning_Algorithm(self.__src)
+            cv2.imwrite(r'thinning_Symbols/'+img, self.__dst)
+
+    @dispatch(ndarray)
+    def Thinning(self, img):
+        self.__src = img
+        # self.__src = super().GrayScale(self.__src)
+        self.__src = super().binary(self.__src)
+        self.__dst = self.__Thinning_Algorithm(self.__src)
+    
+        return self.__dst
 
 if __name__ == '__main__':
     img = cv2.imread(r'Test_Symbols/143.jpg')
@@ -144,7 +174,7 @@ if __name__ == '__main__':
     _, img = cv2.threshold(img,0,255,cv2.THRESH_OTSU)
 
     thinning = Thinning()
-    img = thinning.Thinning(img)
+    img = thinning.__Thinning_Algorithm(img)
     cv2.namedWindow('test',cv2.WINDOW_NORMAL)
     cv2.imshow('test',img)
     cv2.waitKey()

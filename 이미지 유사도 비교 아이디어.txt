@@ -1,0 +1,34 @@
+이미지 유사도 측정?
+
+두 이미지에 nxm 커널을 만든 후 그 커널 안에서 객체를 찾고, 
+해당 객채의 중심점을 기준으로 해당 객체의 픽셀을 비교, 
+
+-> 아마 20% 이상의 유사도가 나오면 같은 계열의 이미지라 판단.
+-> 실험이 필요함.
+
+
+이미지 유사도 측정 참고 웹
+https://up42.com/blog/tech/image-similarity-measures
+
+cosine similirity 방법
+
+두 이미지에서 객체의 윤곽 사각을 추출 한다음
+
+값이 검정인 곳의 x,y 를 비교하여 cosine similirity 방법으로 유사성을 비교.
+
+만드신분이 말씀하시길 핵심은 이미지에서 KeyPoint를 지정해서 서로 비교해서 거리를 계산한다.
+
+각 피처의 거리를 어느정도 일때, 두 이미지가 유사하다고 볼건지를 결정하는 것이 가장 중요하다.
+
+sift(scale) invariant robust similiarit
+
+참고 사이트 목록 : 
+https://bkshin.tistory.com/entry/OpenCV-28-%ED%8A%B9%EC%A7%95-%EB%A7%A4%EC%B9%ADFeature-Matching
+
+https://darkpgmr.tistory.com/116
+
+https://076923.github.io/posts/Python-opencv-38/
+
+https://darkpgmr.tistory.com/131
+
+ORB
