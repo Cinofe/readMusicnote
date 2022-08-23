@@ -1,11 +1,10 @@
-from cmath import exp
-import cv2, numpy as np, matplotlib.pyplot as plt
+import cv2, numpy as np
 
 class Resize:
     def __init__(self):
         self.__src = []
 
-    def preparing(self):
+    def __preparing(self):
         try:
             self.__src = cv2.cvtColor(self.__src, cv2.COLOR_RGB2GRAY)
             _, self.__src = cv2.threshold(self.__src, 127, 255, cv2.THRESH_OTSU)
@@ -17,7 +16,7 @@ class Resize:
 
     def resizing(self, src, Scale=2):
         self.__src = src.copy()
-        self.preparing()
+        self.__preparing()
         w, h = self.__src.shape
         s = Scale
         dst = np.zeros((w*s, h*s),np.uint8)
