@@ -41,10 +41,8 @@ class Del_Noise(parent):
         '''
     def delete_noise(self):
         # 기본적인 악절 추적위한 이미지
-        print("dst :",end= " ")
         dst = super().binary(self.__src)
         # 악절의 범위 확장을 위한 음표 추적위한 이미지
-        print("dst2 :",end= " ")
         dst2 = super().binary(self.__dst)
         cv2.imshow('test',self.__dst)
         # 측정된 악절만 이력할 이미지
@@ -144,8 +142,9 @@ class Del_Noise(parent):
         -> 완전히 제거 하려고 하지 말고, 각 이미지를 잘라 저장하고, 저장한 이미지에서 세선화를 거쳐
         패턴을 찾고 분류하려는 패턴 이외의 기호들은 잡음으로 처리
         """
-        i = 0
         dir = os.listdir(r'Find_Symbols/')
+        # i = len(dir)
+        i = 1
 
         if len(dir) != 0:
             for d in dir:

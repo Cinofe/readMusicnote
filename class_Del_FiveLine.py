@@ -1,6 +1,6 @@
 from parent import parent
 from multipledispatch import dispatch
-import cv2, numpy as np
+import cv2, numpy as np, time
 
 class Del_FiveLine(parent):
     '''
@@ -20,6 +20,7 @@ class Del_FiveLine(parent):
         self.__h, self.__w = self.__src.shape
         self.__find_hist()
         self.__findFiveLine()
+
     
     def GetImg(self):
         return self.__src,self.__dst
@@ -27,8 +28,8 @@ class Del_FiveLine(parent):
     #  모든 이미지 보기
     @dispatch()
     def show(self):
-        cv2.imshow('dst',self.__src)
-        cv2.imshow('img',self.__dst)
+        merged = cv2.hconcat([self.__src, self.__dst])
+        cv2.imshow('result',merged)
     
     # 결과 이미지 보기
     @dispatch(str)
@@ -62,6 +63,7 @@ class Del_FiveLine(parent):
                 while self.__src[h,(s+p)+100] >= 240:
                     p += 1
                 self.wpos.append(s+p)
+        # print(self.wpos)
 
     # 검출된 검정 픽셀 선 삭제 
     def delete_line(self,whs):
