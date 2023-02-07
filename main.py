@@ -1,6 +1,6 @@
 from class_Del_FiveLine import Del_FiveLine
 from class_Del_Noise import Del_Noise
-import cv2
+import cv2, time
 import os
 
 
@@ -30,8 +30,11 @@ def oneimg():
 
     DN = Del_Noise(*DFL.GetImg(), DFL.hist)
     # DFL.find_degree(whpos)
+    # start = time.time()
     DN.delete_noise()
     DN.find_Contours()
+    # end = time.time()
+    # print(f'{end-start}')
 
     # DFL.show()
 

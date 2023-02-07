@@ -52,7 +52,8 @@ class Del_Noise(parent):
         dst = cv2.erode(dst, np.ones((3,3), np.uint8),anchor=(-1,-1),iterations=1)
         dst = cv2.dilate(dst, np.ones((1,5), np.uint8), anchor=(-1,-1),iterations=1)
         # 명확한 음계를 파악하기 위해 형태학(모폴로지)연산 이용
-        # dst2 = cv2.erode(dst2, np.ones((1,2),np.uint8),anchor=(-1,-1),iterations=1)
+        dst2 = cv2.erode(dst2, np.ones((1,2),np.uint8),anchor=(-1,-1),iterations=1)
+
         # 악절이 표현된 윤곽 사각형의 좌표가 들어갈 리스트
         FLlocs = []
         # 기호가 표현된 윤곽 사각형의 좌표가 들어갈 리스트
@@ -69,6 +70,7 @@ class Del_Noise(parent):
             if h >= 30 and w >= self.__w//2:
                 FLlocs.append((x,y,w,h))
                 cv2.rectangle(dst,(x,y),(x+w,y+h),(0,0,0),1)
+                
         
         # 악절 이외의 기호 영역 찾기
         for contour in Scontours:
@@ -79,6 +81,10 @@ class Del_Noise(parent):
                 continue
             SymbolLocs.append((x,y,w,h))
             cv2.rectangle(dst2,(x,y),(x+w,y+h),(0,0,0),1)
+
+        
+        
+        # cv2.imwrite("test.jpg",self.__src)
         # cv2.imshow("dst",dst)
         # cv2.imshow("dst2",dst2)
         # 오선 확장 조건
@@ -103,8 +109,11 @@ class Del_Noise(parent):
             x,y,w,h = flloc
             dst3[y:y+h,x:x+w] = self.__src[y:y+h,x:x+w].copy()
             dst4[y:y+h,x:x+w] = self.__dst[y:y+h,x:x+w].copy()
-            cv2.rectangle(self.__src,flloc,(0,0,0),1)
-        # cv2.imshow('src',self.__src)
+            cv2.rectangle(self.__src,flloc,(0,0,0),2)
+        cv2.imshow("dst",dst3)
+        cv2.imwrite("test.jpg",dst3)
+        # cv2.imshow('dst3',dst3)
+        # cv2.imshow('dst4',dst4)
         # cv2.waitKey()
         self.__img = dst3.copy()
         self.__dst = dst4.copy()
@@ -133,8 +142,11 @@ class Del_Noise(parent):
     def find_Contours(self):
         src = super().binary(self.__dst)
         dst = super().binary(self.__dst)
+        
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(3,5))
-        src = cv2.erode(src,kernel,anchor=(-1,-1),iterations=1)
+        # src = cv2.erode(src,kernel,anchor=(-1,-1),iterations=1)
+        # cv2.imshow('dst',src)
+        # cv2.waitKey()
 
         contours, _ = cv2.findContours(src,cv2.RETR_LIST,cv2.CHAIN_APPROX_NONE)
         """
@@ -157,5 +169,6 @@ class Del_Noise(parent):
 
             if w>7 or h>7:
                 new_img = dst[y:y+h,x:x+w].copy()
-                cv2.imwrite(r'Find_Symbols/'+str(i)+".jpg",new_img)
+                # cv2.imwrite(r'Find_Symbols/'+str(i)+".jpg",new_img)
                 i += 1
+        print(i)
