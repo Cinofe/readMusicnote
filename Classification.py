@@ -296,26 +296,51 @@ class Classification:
 
         return nor
 
-    
+    ## 음표 분류를 위해 NHSW 사용해보기
     def compare(self, img1, img2):
-        
-        img2 = cv2.resize(img2,*reversed(img1.shape),interpolation=cv2.INTER_LANCZOS4)
+        import numpy as np
+        import faiss
 
-        src1 = self.One_Resize(img1,5,cv2.INTER_LANCZOS4)
-        src2 = self.One_Resize(img2,5,cv2.INTER_LANCZOS4)
-        _, src1 = cv2.threshold(src1,0,255,cv2.THRESH_OTSU)
-        _, src2 = cv2.threshold(src2,0,255,cv2.THRESH_OTSU)
+        ## 여기에 원본 이미지가 들어가야 함
+        # 랜덤한 1000개의 64차원 벡터 생성
+        data = np.random.rand(1000, 64).astype('float32')
 
-        keypoints = []
+        # HNSW 인덱스 생성
+        index = faiss.IndexHNSWFlat(64, 32)
+        index.verbose = True
 
-        keypoints.append(self.GetCorner(src1,"8_2"))
-        keypoints.append(self.GetCorner(src2,"8_2"))
+        # 데이터 추가
+        index.add(data)
 
-        print(keypoints)
+        ## 여기에 비교 이미지가 들어가야 함
+        # 새로운 데이터 생성
+        query = np.random.rand(1, 64).astype('float32')
 
-        cv2.imshow('src1',src1)
-        cv2.imshow('src2',src2)
-        cv2.waitKey()
+        # 가장 가까운 이웃 검색
+        D, I = index.search(query, k=1)
+
+        # 결과 출력
+        print('Query vector: ', query)
+        print('Nearest neighbor: ', data[I[0]])
+        print('Distance: ', D[0])
+
+        # img2 = cv2.resize(img2,*reversed(img1.shape),interpolation=cv2.INTER_LANCZOS4)
+
+        # src1 = self.One_Resize(img1,5,cv2.INTER_LANCZOS4)
+        # src2 = self.One_Resize(img2,5,cv2.INTER_LANCZOS4)
+        # _, src1 = cv2.threshold(src1,0,255,cv2.THRESH_OTSU)
+        # _, src2 = cv2.threshold(src2,0,255,cv2.THRESH_OTSU)
+
+        # keypoints = []
+
+        # keypoints.append(self.GetCorner(src1,"8_2"))
+        # keypoints.append(self.GetCorner(src2,"8_2"))
+
+        # print(keypoints)
+
+        # cv2.imshow('src1',src1)
+        # cv2.imshow('src2',src2)
+        # cv2.waitKey()
 
 
 ## 비슷하게 생겨서 잘못 인식된 이미지들 분류
