@@ -11,8 +11,10 @@ class Del_FiveLine(parent):
     이미지 좌측에서 가장 위에 있는 검정 픽셀 검출
     '''
     def __init__(self,img):
-        self.__origin_img = cv2.imread(r'SheetMusics/'+img)
-        self.__src = super().GrayScale(self.__origin_img)
+        self.__src = cv2.imread(r'SheetMusics/'+img, cv2.IMREAD_GRAYSCALE)
+        if self.__src.shape[1] > 1500:
+            self.__src = cv2.resize(self.__src,(self.__src.shape[1]//3,self.__src.shape[0]//3),interpolation=cv2.INTER_AREA)
+        print(self.__src.shape)
         self.__dst = self.__src.copy()
         self.hist= []
         self.wpos = []

@@ -93,6 +93,7 @@ class Classification:
         src = cv2.resize(src, (w*Scale, h*Scale), interpolation=interpol)
         # _, src = cv2.threshold(src, 0, 255, cv2.THRESH_OTSU)
         return src
+    
     # 10번에 걸쳐 점차 원하는 배율로 이미지를 확장하는 코드
     def Repeat_Reszie(self, img, Scale, interpol):
         src = img.copy()
@@ -297,10 +298,8 @@ class Classification:
 
     
     def compare(self, img1, img2):
-
-        h,w = img1.shape
         
-        img2 = cv2.resize(img2,(w,h),interpolation=cv2.INTER_LANCZOS4)
+        img2 = cv2.resize(img2,*reversed(img1.shape),interpolation=cv2.INTER_LANCZOS4)
 
         src1 = self.One_Resize(img1,5,cv2.INTER_LANCZOS4)
         src2 = self.One_Resize(img2,5,cv2.INTER_LANCZOS4)
