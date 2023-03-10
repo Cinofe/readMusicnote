@@ -167,7 +167,7 @@ class Del_Noise(parent):
 
             if w>7 or h>7:
                 new_img = dst[y:y+h,x:x+w].copy()
-                # cv2.imwrite(r'Find_Symbols/'+str(i)+".jpg",new_img)
+                cv2.imwrite(r'Find_Symbols/'+str(i)+".jpg",new_img)
                 i += 1
         print(i)
 

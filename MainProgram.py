@@ -36,8 +36,8 @@ def oneimg():
     # DFL.find_degree(whpos)
     # start = time.time()
     DN.delete_noise()
-    # DN.find_Contours()
-    DN.findData()
+    DN.find_Contours()
+    # DN.findData()
     # end = time.tim10()
     # print(f'{end-start}')
 
