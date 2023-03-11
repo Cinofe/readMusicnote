@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 
 
 class Classification:
-    def __init__(self):
-        self.__sift = cv2.xfeatures2d.SIFT_create()
-        self.__sift_matcher = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
+    # def __init__(self):
+        # self.__sift = cv2.xfeatures2d.SIFT_create()
+        # self.__sift_matcher = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
     # 파라미터 template 들어 있는 폴더명, compare 이미지 들어 있는 폴더명
     # 이미지 높이, 너비 반올림 확장
     # 이미지 가장자리 검정 선을 흰선으로 바꿔줌
@@ -284,23 +284,46 @@ class Classification:
     def GetCorner(self, img):
         
         ## 코너 추출(img,maxCorner,qualityLevel,minDistance)
-        corners = cv2.goodFeaturesToTrack(img,20,0.001,10)
+        corners = cv2.goodFeaturesToTrack(img,20,0.001,3)
 
         nor = []
 
         for cor in corners:
             x, y = [*map(int, *cor)]
             nor.append((x, y))
-
-        if len(nor) < 20:
-            nor.extend([(0,0) for _ in range(20-len(nor))])
-
+        
         return nor
 
     ## 음표 분류를 위해 NHSW 사용해보기
     def compare(self, img1, img2):
         ###############################################################################################
 
+
+        def calcVector(src, feature, patchSize):
+            ## 특징 벡터 저장 리스트
+            featureVectors = []
+            for x, y in feature:
+                ## 이미지의 특징 좌표를 중심으로 8x8 크기의 이미지 패치 추출
+                featurePatch = src[y-patchSize//2:y+patchSize//2, x-patchSize//2:x+patchSize//2]
+
+                ## 추출한 패치 내부의 모든 픽셀 값을 특징 벡터로 변환
+                featureVector = featurePatch.reshape(-1)
+                ## 값의 정규화
+                featureVector = featureVector / 255
+                
+                ## 각 특징점의 특징 벡터를 모두 추합해 하나의 특징벡터로 변환
+                featureVectors.extend(featureVector)
+            return featureVectors
+
+
+        def createVector(src, patchSize):
+            ## 이미지 이진화
+            _, src = cv2.threshold(src,128,255,cv2.THRESH_OTSU)
+
+            ## 이미지 패딩 추가
+            src = np.pad(src, ((patchSize,patchSize),(patchSize,patchSize)),mode='maximum')
+
+            return calcVector(src,self.GetCorner(src),patchSize)
         ## HNSW 예시
 
         ## GFTT 코너 추출 알고리즘을 이용하여 각 음표 이미지의 코너를 추출하고 <- 이미지의 크기가 미치는 영향 분석 or 이미지들을 여러 크기로 변경해가며 추출
@@ -312,87 +335,61 @@ class Classification:
 
         import faiss
 
-
-        ## 데이터 셋 경로
-        dataPath = 'Kaggle_Music_note_datasets/datasets/datasets/Notes/Eight/'
-        ## 데이터 셋 리스트
-        dataList = os.listdir(dataPath)
-        ## 데이터 리스트 정렬
-        dataList = sorted(dataList, key = lambda x : int(x.split('.')[0][1:]))
+        path = 'Kaggle_Music_note_datasets/datasets/datasets/Notes/'
+        folderList = os.listdir(path)
 
         ## 입력 데이터 경로
         inputPath = 'Find_Symbols/'
         ## 입력 데이터 리스트
         inputList = os.listdir(inputPath)
         ## 데이터 리스트 정렬
-        inputList = sorted(inputList, key = lambda x : int(x.split('.')[0]))      
+        inputList = sorted(inputList, key = lambda x : int(x.split('.')[0]))
 
-        ## 8분 음표 데이터 셋을 HNSW 데이터 포인트로 추가
+        ## 데이터셋 리스트
+        dataSet = []
 
-        ## 영상 코너 특징점은 최대 20개까지만 추출, 20개 미만 일 경우 나머지 부분은 0으로 채우기
+        for folderName in folderList:
+            ## 데이터 셋 경로
+            dataPath = path + folderName +'/'
+            # dataPath = 'template/'
+            ## 데이터 셋 리스트
+            dataList = os.listdir(dataPath)
+            ## 데이터 리스트 정렬
+            dataList = sorted(dataList, key = lambda x : int(x.split('.')[0][1:]))
+            # dataList = sorted(dataList, key = lambda x : int(x.replace('_','').replace('b','').split('.')[0]))
+            dataList = [*map(lambda x : folderName + '/' + x,dataList)]
+            dataSet.extend(dataList)
+
+        ## 영상 코너 특징점은 최대 20개까지만 추출
         ## 추출된 특징점을 주변의 패치 영역을 추출하고 특징 벡터로 전환 후 HNSW에 입력
-
         def addingData_Case1():
-            ## 특징 좌표 임시 저장 리스트
-            featureList = []
             ## 각 이미지 마다의 특징벡터가 저장됨
             vectorImages = []
+
+            ## 특징 벡터 저장 리스트
+            queryFeatureVectors = []
+
             
-            inputImage = cv2.imread(dataPath+dataList[0],cv2.IMREAD_GRAYSCALE)
-            inputImage = cv2.resize(inputImage,dsize=None,fx=5,fy=5,interpolation=cv2.INTER_CUBIC)
+            inputImage = cv2.imread(path+dataSet[0],cv2.IMREAD_GRAYSCALE)
+            inputImage = cv2.resize(inputImage,dsize=None,fx=4,fy=4,interpolation=cv2.INTER_CUBIC)
 
             ## 벡터 추출 패치 사이즈
-            # 이미지 크기의 10%
+            # 이미지 크기의 10% => 추출에 실패하는 경우 발생
             patchSize = inputImage.shape[0] // 10
 
             ## 이미지 읽기
-            for i, iName in enumerate(dataList[:10]):
+            for iName in dataSet:
                 ## 데이터 이미지 입력
-                inputImage = cv2.imread(dataPath + iName, cv2.IMREAD_GRAYSCALE)
-
+                inputImage = cv2.imread(path + iName, cv2.IMREAD_GRAYSCALE)
                 ## 이미지 크기 변경
-                inputImage = cv2.resize(inputImage,dsize=None,fx=3.5,fy=3.5,interpolation=cv2.INTER_CUBIC)
-                ## 이미지 이진화
-                _, inputImage = cv2.threshold(inputImage,128,255,cv2.THRESH_OTSU)
-                ## 변경된 이미지 크기 확인
-                print(f'size : {inputImage.shape}')
-                ## 데이터 이미지의 특지점 추출
-                featureList.append(self.GetCorner(inputImage))
-                ## 특징 벡터 저장 리스트
-                featureVectors = []
+                inputImage = cv2.resize(inputImage,dsize=None,fx=6,fy=6,interpolation=cv2.INTER_CUBIC)
 
-                ## 각 이미지의 특징 좌표들을 특징 벡터로 변환
-                for x, y in featureList[i]:
-                    ## 이미지의 특징 좌표를 중심으로 8x8 크기의 이미지 패치 추출
-                    featurePatch = inputImage[y-patchSize//2:y+patchSize//2, x-patchSize//2:x+patchSize//2]
-
-                    ## 추출한 패치 단일 벡터로 변환하기
-                    ### -> 방법 : convolution 사용? -> 필터는 어떻게 구성해야 할까? -> 필터는 1로 모두 채움
-                    convFilter = [[1 for _ in range(3)]for _ in range(3)]
-                    print(convFilter)
-                    return
-
-                    ## 추출한 패치 내부의 모든 픽셀 값을 특징 벡터로 변환
-                    featureVector = featurePatch.reshape(-1)
-                    featureVector = featureVector / 255
-
-                    ## 각 특징점의 특징 벡터를 모두 추합해 하나의 특징벡터로 변환
-                    featureVectors.extend(featureVector)
-                ## 추합된 하나의 이미지의 특징 벡터를 저장
-                vectorImages.append(featureVectors)
-            return
-            # print([len(v) for v in vectorImages])
-            maxlen = max([len(v) for v in vectorImages])
-            for i, v in enumerate(vectorImages):
-                if len(v) < maxlen:
-                    dif = maxlen - len(v)
-                    v.extend([0]*dif)
-                    vectorImages[i] = v
+                vectorImages.append(createVector(inputImage,patchSize))
 
             ## HNSW 인덱스 생성
-            dim = maxlen ## 특징 벡터 차원
+            dim = len(vectorImages[22]) ## 특징 벡터 차원
 
-            featureIndex = faiss.IndexHNSWFlat(dim,32)
+            featureIndex = faiss.IndexHNSWFlat(dim, 32)
             
             vectorImages = np.array(vectorImages)
                     
@@ -401,57 +398,27 @@ class Classification:
             featureIndex.add(vectorImages)
 
             ## 쿼리 이미지 입력
-            queryImage = cv2.imread(inputPath + inputList[23], cv2.IMREAD_GRAYSCALE)
+            queryImage = cv2.imread(inputPath + inputList[22], cv2.IMREAD_GRAYSCALE)
 
             ## 이미지 크기를 데이터셋 이미지 크기로 확장
             queryImage = cv2.resize(queryImage, dsize=tuple(reversed(inputImage.shape)),interpolation=cv2.INTER_CUBIC)
-            
-            ## 쿼리 이미지 특징점 추출
-            queryFeature = self.GetCorner(queryImage)
 
-            ## 특징 벡터 저장 리스트
-            queryFeatureVectors = []
-
-            ## 쿼리 이미지 특징 벡터 연산
-            for x, y in queryFeature:
-                ## 이미지의 특징 좌표를 중심으로 8x8 크기의 이미지 패치 추출
-                featurePatch = queryImage[y-patchSize//2:y+patchSize//2, x-patchSize//2:x+patchSize//2]
-
-                ## 추출한 패치 내부의 모든 픽셀 값을 특징 벡터로 변환
-                featureVector = featurePatch.reshape(-1)
-                featureVector = featureVector / 255
-                queryFeatureVectors.extend(featureVector)
-
-            queryFeatureVectors = np.array([np.array(queryFeatureVectors)])
+            ## 추합된 하나의 이미지의 특징 벡터를 저장
+            queryFeatureVectors = np.array([createVector(queryImage,patchSize)])
 
             ### 쿼리 수행
             k = 3 # 가장 유사한 이웃 수
             D, I = featureIndex.search(queryFeatureVectors, k)
-            print(D, I, sep='\n')
-            # print(min([min(d) for d in D]))
-            # print(featureVectors[318]*255)
+
+            similarity_scores = 1 / (1 + D)
+            D = [d for d in D]
+            similarity_scores = [s * 1000 for s in similarity_scores]
+
+            print('최근접 이웃 거리:', *D)
+            print('최근접 이웃 유사도 점수:', *similarity_scores)
+            print('최근접 이웃 인덱스:', *I)
 
         addingData_Case1()
-
-
-        ###############################################################################################
-        # img2 = cv2.resize(img2,tuple(reversed(img1.shape)),interpolation=cv2.INTER_LANCZOS4)
-
-        # src1 = self.One_Resize(img1,5,cv2.INTER_LANCZOS4)
-        # src2 = self.One_Resize(img2,5,cv2.INTER_LANCZOS4)
-        # _, src1 = cv2.threshold(src1,0,255,cv2.THRESH_OTSU)
-        # _, src2 = cv2.threshold(src2,0,255,cv2.THRESH_OTSU)
-
-        # keypoints = []
-
-        # keypoints.append(self.GetCorner(src1,"8_2"))
-        # keypoints.append(self.GetCorner(src2,"8_2"))
-
-        # print(keypoints)
-
-        # cv2.imshow('src1',src1)
-        # cv2.imshow('src2',src2)
-        # cv2.waitKey()
 
 
 ## 비슷하게 생겨서 잘못 인식된 이미지들 분류
