@@ -1,8 +1,6 @@
-from class_Del_FiveLine import Del_FiveLine
-from class_Del_Noise import Del_Noise
-import cv2, time
-import os
-
+from del_FiveLine import Del_FiveLine
+from del_Noise import Del_Noise
+import cv2, os
 
 def allimg():
     imgs = os.listdir(r'SheetMusics')[10:20]
@@ -27,23 +25,12 @@ def oneimg():
 
     imgs.sort(key=lambda x : int(x.replace(".jpg","").split()[-1]))
 
-    DFL = Del_FiveLine(imgs[3])
-    whpos = list(zip(DFL.wpos, DFL.hist))
-    DFL.delete_line(whpos)
-    # DFL.show()
+    DFL = Del_FiveLine(imgs[0])
 
     DN = Del_Noise(*DFL.GetImg(), DFL.hist)
-    # DFL.find_degree(whpos)
-    # start = time.time()
     DN.delete_noise()
     DN.find_Contours()
     # DN.findData()
-    # end = time.tim10()
-    # print(f'{end-start}')
-
-    # DFL.show()
-
-    cv2.waitKey()
 
 
 def main():
